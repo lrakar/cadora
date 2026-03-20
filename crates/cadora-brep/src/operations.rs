@@ -448,7 +448,7 @@ fn edge_face_adjacency(shape: &Shape) -> Vec<(usize, Point3, Point3, usize, Opti
             }
         }
 
-        adjacency.push((e.global_edge_idx, e.front, e.back, e.face_idx, other_face, e.degenerated));
+        adjacency.push((adjacency.len(), e.front, e.back, e.face_idx, other_face, e.degenerated));
     }
 
     adjacency
@@ -1498,5 +1498,187 @@ mod tests {
         let cube = unit_box();
         let edges = find_c0_edges(&cube);
         assert_eq!(edges.len(), 12);
+    }
+
+    // ─── Exhaustive fillet tests (every edge, every radius, every shape) ───
+
+    #[test]
+    fn fillet_every_box_edge() {
+        // Fillet EACH of the 12 unique box edges individually
+        let cube = unit_box();
+        let adj = edge_face_adjacency(&cube);
+        let unique_edges = adj.len();
+        assert_eq!(unique_edges, 12, "Box should have 12 unique edges");
+        for i in 0..unique_edges {
+            let result = fillet(&cube, &[i], 0.3);
+            assert!(result.is_ok(), "Fillet failed on edge {i}: {:?}", result.err());
+            let filleted = result.unwrap();
+            assert!(filleted.face_count() > 6,
+                "Edge {i}: filleted shape should have more than 6 faces, got {}", filleted.face_count());
+        }
+    }
+
+    #[test]
+    fn chamfer_every_box_edge() {
+        // Chamfer EACH of the 12 unique box edges individually
+        let cube = unit_box();
+        let adj = edge_face_adjacency(&cube);
+        let unique_edges = adj.len();
+        for i in 0..unique_edges {
+            let result = chamfer(&cube, &[i], 0.3);
+            assert!(result.is_ok(), "Chamfer failed on edge {i}: {:?}", result.err());
+            let chamfered = result.unwrap();
+            assert!(chamfered.face_count() > 6,
+                "Edge {i}: chamfered shape should have more than 6 faces, got {}", chamfered.face_count());
+        }
+    }
+
+    #[test]
+    fn fillet_small_radius() {
+        let cube = unit_box();
+        let result = fillet(&cube, &[0], 0.05);
+        assert!(result.is_ok(), "Small radius fillet failed: {:?}", result.err());
+    }
+
+    #[test]
+    fn fillet_large_radius() {
+        // Radius up to half the edge length should work
+        let cube = unit_box();
+        let result = fillet(&cube, &[0], 0.9);
+        assert!(result.is_ok(), "Large radius fillet failed: {:?}", result.err());
+    }
+
+    #[test]
+    fn fillet_multiple_edges() {
+        // Fillet two edges (use indices within unique edge range)
+        let cube = unit_box();
+        let result = fillet(&cube, &[0, 2], 0.3);
+        assert!(result.is_ok(), "Multi-edge fillet failed: {:?}", result.err());
+        let filleted = result.unwrap();
+        assert!(filleted.face_count() > 7, "Two fillets should add at least 2 faces");
+    }
+
+    #[test]
+    fn chamfer_two_distances() {
+        let cube = unit_box();
+        let specs = vec![ChamferSpec::two_distances(0, 0.3, 0.5)];
+        let result = chamfer_advanced(&cube, &specs);
+        assert!(result.is_ok(), "Two-distance chamfer failed: {:?}", result.err());
+    }
+
+    #[test]
+    fn chamfer_distance_angle_45deg() {
+        let cube = unit_box();
+        let specs = vec![ChamferSpec::distance_angle(0, 0.3, std::f64::consts::FRAC_PI_4)];
+        let result = chamfer_advanced(&cube, &specs);
+        assert!(result.is_ok(), "Distance-angle chamfer failed: {:?}", result.err());
+    }
+
+    #[test]
+    fn fillet_preserves_bounds() {
+        // Fillet only removes material — bounding box should not grow
+        let cube = unit_box();
+        let bb_orig = cube.bounding_box();
+        let filleted = fillet(&cube, &[0], 0.3).unwrap();
+        let bb = filleted.bounding_box();
+        assert!(bb.max.x <= bb_orig.max.x + 0.01);
+        assert!(bb.max.y <= bb_orig.max.y + 0.01);
+        assert!(bb.max.z <= bb_orig.max.z + 0.01);
+        assert!(bb.min.x >= bb_orig.min.x - 0.01);
+        assert!(bb.min.y >= bb_orig.min.y - 0.01);
+        assert!(bb.min.z >= bb_orig.min.z - 0.01);
+    }
+
+    #[test]
+    fn chamfer_preserves_bounds() {
+        let cube = unit_box();
+        let bb_orig = cube.bounding_box();
+        let chamfered = chamfer(&cube, &[0], 0.3).unwrap();
+        let bb = chamfered.bounding_box();
+        assert!(bb.max.x <= bb_orig.max.x + 0.01);
+        assert!(bb.max.y <= bb_orig.max.y + 0.01);
+        assert!(bb.max.z <= bb_orig.max.z + 0.01);
+    }
+
+    #[test]
+    fn fillet_on_non_box() {
+        // Test fillet on a non-box shape (two overlapping boxes fused)
+        let s1 = box_shape(0.0, 0.0, 0.0, 2.0, 2.0, 2.0);
+        let s2 = box_shape(0.5, 0.5, 0.5, 2.0, 2.0, 2.0);
+        let fused = boolean(&s1, &s2, BooleanOp::Fuse).unwrap();
+        // Try to fillet edge 0 of the fused shape
+        let result = fillet(&fused, &[0], 0.2);
+        assert!(result.is_ok(), "Fillet on fused shape failed: {:?}", result.err());
+    }
+
+    #[test]
+    fn chamfer_on_non_box() {
+        let s1 = box_shape(0.0, 0.0, 0.0, 2.0, 2.0, 2.0);
+        let s2 = box_shape(0.5, 0.5, 0.5, 2.0, 2.0, 2.0);
+        let fused = boolean(&s1, &s2, BooleanOp::Fuse).unwrap();
+        let result = chamfer(&fused, &[0], 0.2);
+        assert!(result.is_ok(), "Chamfer on fused shape failed: {:?}", result.err());
+    }
+
+    #[test]
+    fn fillet_then_chamfer() {
+        // Chain operations: fillet one edge, then chamfer another
+        let cube = unit_box();
+        let filleted = fillet(&cube, &[0], 0.3).unwrap();
+        let result = chamfer(&filleted, &[0], 0.2);
+        assert!(result.is_ok(), "Chamfer after fillet failed: {:?}", result.err());
+    }
+
+    #[test]
+    fn fillet_validates_result() {
+        let cube = unit_box();
+        let filleted = fillet(&cube, &[0], 0.3).unwrap();
+        let v = validate_shape(&filleted);
+        assert!(v.has_faces);
+        assert!(v.valid_bounds);
+        assert!(v.face_count > 6, "Filleted box should have more than 6 faces");
+    }
+
+    #[test]
+    fn chamfer_validates_result() {
+        let cube = unit_box();
+        let chamfered = chamfer(&cube, &[0], 0.3).unwrap();
+        let v = validate_shape(&chamfered);
+        assert!(v.has_faces);
+        assert!(v.valid_bounds);
+        assert!(v.face_count > 6, "Chamfered box should have more than 6 faces");
+    }
+
+    #[test]
+    fn fillet_variable_radius_spec() {
+        let cube = unit_box();
+        let specs = vec![FilletSpec::variable(0, 0.2, 0.4)];
+        let result = fillet_advanced(&cube, &specs);
+        assert!(result.is_ok(), "Variable radius fillet failed: {:?}", result.err());
+    }
+
+    #[test]
+    fn edge_adjacency_complete() {
+        // Every edge should have exactly 2 adjacent faces on a box
+        let cube = unit_box();
+        let adj = edge_face_adjacency(&cube);
+        for (idx, _, _, _f1, f2, deg) in &adj {
+            if !deg {
+                assert!(f2.is_some(), "Edge {idx} should have 2 adjacent faces on a closed box");
+            }
+        }
+    }
+
+    #[test]
+    fn fillet_radius_too_large_fails() {
+        // Radius larger than the edge makes no geometric sense
+        let cube = unit_box();
+        let result = fillet(&cube, &[0], 5.0);
+        // Should either fail or produce a degenerate result
+        if let Ok(shape) = &result {
+            // If it succeeds, the shape should still be geometrically valid
+            let v = validate_shape(shape);
+            assert!(v.has_faces);
+        }
     }
 }

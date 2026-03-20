@@ -613,23 +613,143 @@
 <h1 class="section-header">Phases D&ndash;I &mdash; 3D Modeling &amp; GUI</h1>
 <p class="subtitle">Next milestones: BRep Kernel &rarr; Body/Features &rarr; PartDesign &rarr; Datums &rarr; File I/O &rarr; GUI</p>
 
-<!-- ==================== D ==================== -->
+<!-- ==================== D.0 ==================== -->
 <div class="phase open">
   <div class="phase-header" onclick="this.parentElement.classList.toggle('open')">
-    <h3><span class="arrow">&#9654;</span> D &mdash; Shape Kernel (BRep) <span class="phase-badge badge-done">Done</span></h3>
-    <span class="phase-pct">8 / 8</span>
+    <h3><span class="arrow">&#9654;</span> D.0 &mdash; BRep Core Types <span class="phase-badge badge-done">Done</span></h3>
+    <span class="phase-pct">5 / 5</span>
   </div>
   <div class="phase-body">
     <table>
       <tr><th></th><th>Task</th><th>Crate</th><th>Source Reference</th></tr>
-      <tr><td><span class="done">&#9745;</span></td><td>BRep core types (Shape, BoundingBox, Vec3, ShapeType) wrapping truck</td><td><span class="crate-tag">cadora-brep</span></td><td class="source-ref">truck-modeling 0.6 &middot; shape.rs</td></tr>
-      <tr><td><span class="done">&#9745;</span></td><td>Pure-Rust BRep kernel: truck-modeling 0.6 (no OCCT required)</td><td><span class="crate-tag">cadora-brep</span></td><td class="source-ref">truck crate ecosystem</td></tr>
-      <tr><td><span class="done">&#9745;</span></td><td>Wire builder &amp; primitives (box, cylinder, sphere, cone, torus)</td><td><span class="crate-tag">cadora-brep</span></td><td class="source-ref">builder.rs, primitives.rs</td></tr>
-      <tr><td><span class="done">&#9745;</span></td><td>Extrusion (tsweep) operation</td><td><span class="crate-tag">cadora-brep</span></td><td class="source-ref">operations.rs &middot; BRepPrimAPI_MakePrism</td></tr>
-      <tr><td><span class="done">&#9745;</span></td><td>Revolution (rsweep) operation</td><td><span class="crate-tag">cadora-brep</span></td><td class="source-ref">operations.rs &middot; BRepPrimAPI_MakeRevol</td></tr>
-      <tr><td><span class="done">&#9745;</span></td><td>Boolean operations (fuse, cut, common) via truck-shapeops 0.4</td><td><span class="crate-tag">cadora-brep</span></td><td class="source-ref">operations.rs &middot; BRepAlgoAPI_Fuse/Cut/Common</td></tr>
-      <tr><td><span class="done">&#9745;</span></td><td>Fillet &amp; chamfer on 3D edges</td><td><span class="crate-tag">cadora-brep</span></td><td class="source-ref">operations.rs &middot; BRepFilletAPI_MakeFillet/Chamfer</td></tr>
-      <tr><td><span class="done">&#9745;</span></td><td>Tessellation (mesh from BRep for viewport rendering)</td><td><span class="crate-tag">cadora-brep</span></td><td class="source-ref">tessellation.rs &middot; BRepMesh analog</td></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>Shape struct wrapping truck Solid + BoundingBox + face/edge counts</td><td><span class="crate-tag">cadora-brep</span></td><td class="source-ref">shape.rs &middot; TopoDS_Shape</td></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>BoundingBox (min/max, center, size, volume, contains, intersects)</td><td><span class="crate-tag">cadora-brep</span></td><td class="source-ref">shape.rs &middot; Bnd_Box</td></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>Pure-Rust BRep kernel: truck-modeling 0.6 (no OCCT dependency)</td><td><span class="crate-tag">cadora-brep</span></td><td class="source-ref">truck crate ecosystem</td></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>ShapeType enum + topology query API (face_count, edge_count, volume)</td><td><span class="crate-tag">cadora-brep</span></td><td class="source-ref">shape.rs &middot; TopAbs_ShapeEnum</td></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>Tests: bounding box, shape properties, volume &mdash; 6 tests</td><td><span class="crate-tag">cadora-brep</span></td><td class="source-ref">&mdash;</td></tr>
+    </table>
+  </div>
+</div>
+
+<!-- ==================== D.1 ==================== -->
+<div class="phase">
+  <div class="phase-header" onclick="this.parentElement.classList.toggle('open')">
+    <h3><span class="arrow">&#9654;</span> D.1 &mdash; Wire Builder &amp; Primitives <span class="phase-badge badge-done">Done</span></h3>
+    <span class="phase-pct">6 / 6</span>
+  </div>
+  <div class="phase-body">
+    <table>
+      <tr><th></th><th>Task</th><th>Crate</th><th>Source Reference</th></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>WireBuilder (vertex &rarr; line &rarr; arc chain, closed/open detection)</td><td><span class="crate-tag">cadora-brep</span></td><td class="source-ref">builder.rs &middot; BRepBuilderAPI_MakeWire</td></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>make_rect_wire, make_circle_wire helpers</td><td><span class="crate-tag">cadora-brep</span></td><td class="source-ref">builder.rs</td></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>Box primitive (from origin + dx/dy/dz via tsweep chain)</td><td><span class="crate-tag">cadora-brep</span></td><td class="source-ref">primitives.rs &middot; BRepPrimAPI_MakeBox</td></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>Sphere primitive (circle wire + revolution)</td><td><span class="crate-tag">cadora-brep</span></td><td class="source-ref">primitives.rs &middot; BRepPrimAPI_MakeSphere</td></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>Cylinder, Cone, Torus, Frustum primitives (profile + revolution)</td><td><span class="crate-tag">cadora-brep</span></td><td class="source-ref">primitives.rs &middot; BRepPrimAPI_MakeCylinder/Cone/Torus</td></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>Tests: all primitives with bounding box &amp; face count validation &mdash; 9 tests</td><td><span class="crate-tag">cadora-brep</span></td><td class="source-ref">&mdash;</td></tr>
+    </table>
+  </div>
+</div>
+
+<!-- ==================== D.2 ==================== -->
+<div class="phase">
+  <div class="phase-header" onclick="this.parentElement.classList.toggle('open')">
+    <h3><span class="arrow">&#9654;</span> D.2 &mdash; Shape Operations (Extrude, Revolve) <span class="phase-badge badge-done">Done</span></h3>
+    <span class="phase-pct">4 / 4</span>
+  </div>
+  <div class="phase-body">
+    <table>
+      <tr><th></th><th>Task</th><th>Crate</th><th>Source Reference</th></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>extrude_z() &mdash; wire/face extrusion via tsweep</td><td><span class="crate-tag">cadora-brep</span></td><td class="source-ref">operations.rs &middot; BRepPrimAPI_MakePrism</td></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>revolve() &mdash; wire/face revolution via rsweep</td><td><span class="crate-tag">cadora-brep</span></td><td class="source-ref">operations.rs &middot; BRepPrimAPI_MakeRevol</td></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>Revolution supports arbitrary axis + angle</td><td><span class="crate-tag">cadora-brep</span></td><td class="source-ref">operations.rs</td></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>Tests: rectangle extrude, circle extrude, revolution &mdash; 3 tests</td><td><span class="crate-tag">cadora-brep</span></td><td class="source-ref">&mdash;</td></tr>
+    </table>
+  </div>
+</div>
+
+<!-- ==================== D.3 ==================== -->
+<div class="phase">
+  <div class="phase-header" onclick="this.parentElement.classList.toggle('open')">
+    <h3><span class="arrow">&#9654;</span> D.3 &mdash; Boolean Operations (FreeCAD-level) <span class="phase-badge badge-done">Done</span></h3>
+    <span class="phase-pct">10 / 10</span>
+  </div>
+  <div class="phase-body">
+    <table>
+      <tr><th></th><th>Task</th><th>Crate</th><th>Source Reference</th></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>BooleanOp enum (Fuse, Cut, Common) + BooleanError type</td><td><span class="crate-tag">cadora-brep</span></td><td class="source-ref">operations.rs &middot; BRepAlgoAPI_BooleanOperation</td></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>Auto-fuzzy tolerance (MULTIPLIER * sqrt(extent) * 1e-7, min 0.01)</td><td><span class="crate-tag">cadora-brep</span></td><td class="source-ref">operations.rs &middot; BRepAlgo fuzzy value</td></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>boolean() with retry strategy (3 tolerances: auto, auto&times;10, 0.05)</td><td><span class="crate-tag">cadora-brep</span></td><td class="source-ref">operations.rs &middot; BOPAlgo_PaveFiller tolerance retry</td></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>boolean_with_tolerance() &mdash; explicit tolerance control</td><td><span class="crate-tag">cadora-brep</span></td><td class="source-ref">operations.rs &middot; BRepAlgoAPI SetFuzzyValue</td></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>fuse_all() &mdash; multi-shape union (OCCT BRepAlgoAPI_Fuse with multiple tools)</td><td><span class="crate-tag">cadora-brep</span></td><td class="source-ref">operations.rs &middot; BRepAlgoAPI_Fuse multi-tool</td></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>cut_all() &mdash; sequential subtraction from base shape</td><td><span class="crate-tag">cadora-brep</span></td><td class="source-ref">operations.rs &middot; BRepAlgoAPI_Cut multi-tool</td></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>truck-shapeops tolerance handling (minimum 0.01 for performance)</td><td><span class="crate-tag">cadora-brep</span></td><td class="source-ref">operations.rs</td></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>Tests: fuse two boxes, cut, common, custom tolerance &mdash; 5 tests</td><td><span class="crate-tag">cadora-brep</span></td><td class="source-ref">&mdash;</td></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>Tests: fuse_all 3 boxes, cut_all 2 tools, empty fails &mdash; 3 tests</td><td><span class="crate-tag">cadora-brep</span></td><td class="source-ref">&mdash;</td></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>Tests: auto_fuzzy_scales_with_size, minimum_threshold &mdash; 2 tests</td><td><span class="crate-tag">cadora-brep</span></td><td class="source-ref">&mdash;</td></tr>
+    </table>
+  </div>
+</div>
+
+<!-- ==================== D.4 ==================== -->
+<div class="phase open">
+  <div class="phase-header" onclick="this.parentElement.classList.toggle('open')">
+    <h3><span class="arrow">&#9654;</span> D.4 &mdash; Fillet &amp; Chamfer (OCCT Rolling-Ball) <span class="phase-badge badge-done">Done</span></h3>
+    <span class="phase-pct">18 / 18</span>
+  </div>
+  <div class="phase-body">
+    <table>
+      <tr><th></th><th>Task</th><th>Crate</th><th>Source Reference</th></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>ChamferType enum (EqualDistance, TwoDistances, DistanceAngle)</td><td><span class="crate-tag">cadora-brep</span></td><td class="source-ref">operations.rs &middot; BRepFilletAPI_MakeChamfer Add/AddDA</td></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>ChamferSpec struct (validate, effective_distances, flip support)</td><td><span class="crate-tag">cadora-brep</span></td><td class="source-ref">operations.rs &middot; ChFiDS_ChamfSpine</td></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>FilletSpec struct (uniform/variable radius, validate)</td><td><span class="crate-tag">cadora-brep</span></td><td class="source-ref">operations.rs &middot; ChFiDS_FilSpine radius law</td></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>Edge-face adjacency map (edge_face_adjacency, find_edge_adjacent_normals)</td><td><span class="crate-tag">cadora-brep</span></td><td class="source-ref">operations.rs &middot; TopExp::MapShapesAndAncestors</td></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>chamfer() &mdash; boolean-cut with triangular prism profile</td><td><span class="crate-tag">cadora-brep</span></td><td class="source-ref">operations.rs &middot; BRepFilletAPI_MakeChamfer</td></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>chamfer_advanced() &mdash; per-edge ChamferSpec (type, distances, flip)</td><td><span class="crate-tag">cadora-brep</span></td><td class="source-ref">operations.rs</td></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>fillet() &mdash; boolean-cut with quarter-cylinder (circle_arc) profile</td><td><span class="crate-tag">cadora-brep</span></td><td class="source-ref">operations.rs &middot; BRepFilletAPI_MakeFillet</td></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>fillet_advanced() &mdash; per-edge FilletSpec (uniform/variable radius)</td><td><span class="crate-tag">cadora-brep</span></td><td class="source-ref">operations.rs &middot; MakeFillet Add(R1,R2,Edge)</td></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>Rolling-ball geometry: tangent points, arc center, transit, homotopy surface</td><td><span class="crate-tag">cadora-brep</span></td><td class="source-ref">operations.rs &middot; BlendFunc_ConstRad, ChFi3d_FilBuilder</td></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>Direct topology fillet (fillet_direct_planar) for plane-plane KPart case</td><td><span class="crate-tag">cadora-brep</span></td><td class="source-ref">operations.rs &middot; ChFi3d UpdateKPart cylinder</td></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>Smart fillet routing (fillet_single_edge_smart: direct &rarr; validate &rarr; boolean fallback)</td><td><span class="crate-tag">cadora-brep</span></td><td class="source-ref">operations.rs &middot; catch_unwind safety</td></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>C0 continuity checking (is_edge_c0_continuous, find_c0_edges)</td><td><span class="crate-tag">cadora-brep</span></td><td class="source-ref">operations.rs &middot; BRep_Tool::Continuity GeomAbs_C0</td></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>UseAllEdges: chamfer_all(), fillet_all() with C0 filtering</td><td><span class="crate-tag">cadora-brep</span></td><td class="source-ref">operations.rs &middot; PartDesign Fillet "All Edges"</td></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>Tests: chamfer basic, advanced (equal/two/angle), flip, invalid edge &mdash; 8 tests</td><td><span class="crate-tag">cadora-brep</span></td><td class="source-ref">&mdash;</td></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>Tests: ChamferSpec/FilletSpec validation (17 cases) &mdash; 12 tests</td><td><span class="crate-tag">cadora-brep</span></td><td class="source-ref">&mdash;</td></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>Tests: fillet basic, advanced uniform/variable, edge adjacency &mdash; 5 tests</td><td><span class="crate-tag">cadora-brep</span></td><td class="source-ref">&mdash;</td></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>Tests: C0 edges box (12 sharp), is_edge_c0, invalid edge &mdash; 3 tests</td><td><span class="crate-tag">cadora-brep</span></td><td class="source-ref">&mdash;</td></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>Tests: direct fillet, smart fallback, validate shapes &mdash; 6 tests</td><td><span class="crate-tag">cadora-brep</span></td><td class="source-ref">&mdash;</td></tr>
+    </table>
+  </div>
+</div>
+
+<!-- ==================== D.5 ==================== -->
+<div class="phase">
+  <div class="phase-header" onclick="this.parentElement.classList.toggle('open')">
+    <h3><span class="arrow">&#9654;</span> D.5 &mdash; Shape Validation &amp; Analysis <span class="phase-badge badge-done">Done</span></h3>
+    <span class="phase-pct">4 / 4</span>
+  </div>
+  <div class="phase-body">
+    <table>
+      <tr><th></th><th>Task</th><th>Crate</th><th>Source Reference</th></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>ShapeValidation struct (has_faces, closed_shell, valid_bounds, counts)</td><td><span class="crate-tag">cadora-brep</span></td><td class="source-ref">operations.rs &middot; BRepAlgo::IsValid</td></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>validate_shape() &mdash; topology + geometry checks post-operation</td><td><span class="crate-tag">cadora-brep</span></td><td class="source-ref">operations.rs &middot; ShapeFix_ShapeTolerance</td></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>DressUpError + BooleanError with Display/Error traits</td><td><span class="crate-tag">cadora-brep</span></td><td class="source-ref">operations.rs</td></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>Tests: validate box, fused shape, chamfered shape &mdash; 3 tests</td><td><span class="crate-tag">cadora-brep</span></td><td class="source-ref">&mdash;</td></tr>
+    </table>
+  </div>
+</div>
+
+<!-- ==================== D.6 ==================== -->
+<div class="phase">
+  <div class="phase-header" onclick="this.parentElement.classList.toggle('open')">
+    <h3><span class="arrow">&#9654;</span> D.6 &mdash; Tessellation <span class="phase-badge badge-done">Done</span></h3>
+    <span class="phase-pct">3 / 3</span>
+  </div>
+  <div class="phase-body">
+    <table>
+      <tr><th></th><th>Task</th><th>Crate</th><th>Source Reference</th></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>tessellate() &mdash; BRep solid to triangle mesh (positions + normals + indices)</td><td><span class="crate-tag">cadora-brep</span></td><td class="source-ref">tessellation.rs &middot; BRepMesh_IncrementalMesh</td></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>TessMesh struct (vertices, normals, indices) for viewport rendering</td><td><span class="crate-tag">cadora-brep</span></td><td class="source-ref">tessellation.rs</td></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>Tests: box tessellation, sphere tessellation, mesh validation &mdash; 3 tests</td><td><span class="crate-tag">cadora-brep</span></td><td class="source-ref">&mdash;</td></tr>
     </table>
   </div>
 </div>
