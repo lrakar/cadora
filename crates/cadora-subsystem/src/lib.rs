@@ -303,10 +303,17 @@ impl SubSystem {
 
     /// Maximum step along direction `xdir` that keeps constraints valid.
     ///
-    /// Currently returns a large default; per-constraint `maxStep` hooks can
-    /// be added when arc/angle wrapping constraints are ported.
-    pub fn max_step(&self, _xdir: &[f64]) -> f64 {
-        1e10
+    /// Calls per-constraint `max_step` hooks to prevent overshoot
+    /// on distance/angle constraints.
+    pub fn max_step(&self, xdir: &[f64]) -> f64 {
+        let dir: Vec<(ParamIdx, f64)> = self.param_list.iter().copied()
+            .zip(xdir.iter().copied())
+            .collect();
+        let mut lim = 1e10_f64;
+        for c in &self.constraints {
+            lim = c.max_step(&self.store, &dir, lim);
+        }
+        lim
     }
 
     // -----------------------------------------------------------------------
@@ -364,8 +371,14 @@ impl SubSystem {
 
     /// Maximum step along direction for an external param list.
     pub fn max_step_ext(&self, ext_params: &[ParamIdx], xdir: &[f64]) -> f64 {
-        let _ = (ext_params, xdir);
-        1e10
+        let dir: Vec<(ParamIdx, f64)> = ext_params.iter().copied()
+            .zip(xdir.iter().copied())
+            .collect();
+        let mut lim = 1e10_f64;
+        for c in &self.constraints {
+            lim = c.max_step(&self.store, &dir, lim);
+        }
+        lim
     }
 
     /// Consume the subsystem and return its owned constraints.

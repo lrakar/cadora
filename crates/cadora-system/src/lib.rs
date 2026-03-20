@@ -12,7 +12,7 @@ use cadora_core::{
     Algorithm, ParamIdx, ParamStore, ReductionMap, SolveStatus, SolverConfig,
 };
 use cadora_diagnosis::{diagnose, DiagnosisResult};
-use cadora_solvers::solve;
+use cadora_solvers::{solve, solve_sqp};
 use cadora_subsystem::SubSystem;
 
 // ---------------------------------------------------------------------------
@@ -499,35 +499,57 @@ impl System {
     /// Solve a dual-system component (driving = equality constraints,
     /// non-driving = objective to minimize).
     ///
-    /// Uses augmented-Lagrangian SQP approach matching C++ `System::solve(SubSystem*, SubSystem*)`.
+    /// Uses SQP to minimize non-driving objective subject to driving equality constraints.
     fn solve_dual_component(
         &mut self,
         comp_idx: usize,
-        alg: Algorithm,
+        _alg: Algorithm,
     ) -> SolveStatus {
-        let has_driving = !self.components[comp_idx].driving_indices.is_empty();
-        let has_nondriving = !self.components[comp_idx].nondriving_indices.is_empty();
+        let comp = &self.components[comp_idx];
+        let driving_indices = comp.driving_indices.clone();
+        let nondriving_indices = comp.nondriving_indices.clone();
+        let params = comp.params.clone();
+        let reduction = comp.reduction.clone();
 
-        // For now, solve driving constraints first, then non-driving
-        // (simplified approach — full SQP is deferred to Phase 6 completion)
-        let driving_status = if has_driving {
-            self.solve_single_component(comp_idx, alg, true)
-        } else {
-            SolveStatus::Success
-        };
+        // Take constraints out for both subsystems
+        let driving_constraints: Vec<Box<dyn Constraint>> = driving_indices.iter()
+            .map(|&i| self.constraints[i].take().unwrap())
+            .collect();
+        let nondriving_constraints: Vec<Box<dyn Constraint>> = nondriving_indices.iter()
+            .map(|&i| self.constraints[i].take().unwrap())
+            .collect();
 
-        let nondriving_status = if has_nondriving {
-            self.solve_single_component(comp_idx, alg, false)
-        } else {
-            SolveStatus::Success
-        };
+        // Create both SubSystems
+        let mut subsys_a = SubSystem::new_with_reduction(
+            driving_constraints,
+            &params,
+            &reduction,
+            &self.store,
+        );
+        let mut subsys_b = SubSystem::new_with_reduction(
+            nondriving_constraints,
+            &params,
+            &reduction,
+            &self.store,
+        );
 
-        // Return the worst status
-        if (nondriving_status as u8) > (driving_status as u8) {
-            nondriving_status
-        } else {
-            driving_status
+        // Solve using SQP
+        let status = solve_sqp(&mut subsys_a, &mut subsys_b, &self.config, false);
+
+        // Apply solution from subsys_a (it holds the authoritative params)
+        subsys_a.apply_solution(&mut self.store);
+
+        // Put constraints back
+        let returned_a = subsys_a.into_constraints();
+        for (c, &idx) in returned_a.into_iter().zip(driving_indices.iter()) {
+            self.constraints[idx] = Some(c);
         }
+        let returned_b = subsys_b.into_constraints();
+        for (c, &idx) in returned_b.into_iter().zip(nondriving_indices.iter()) {
+            self.constraints[idx] = Some(c);
+        }
+
+        status
     }
 
     // -----------------------------------------------------------------------
@@ -604,6 +626,71 @@ impl System {
     pub fn reset_to_reference(&mut self) {
         if let Some(ref snap) = self.reference {
             self.store.restore(snap);
+        }
+    }
+
+    /// Undo the last solution by restoring the reference snapshot.
+    pub fn undo_solution(&mut self) {
+        self.reset_to_reference();
+    }
+
+    /// Remove a constraint at a given slot index.
+    /// Invalidates initialization state, requiring `init_solution()` before the next solve.
+    pub fn remove_constraint(&mut self, slot: usize) {
+        if slot < self.constraints.len() {
+            self.constraints[slot] = None;
+            self.is_init = false;
+            self.has_diagnosis = false;
+            self.components.clear();
+        }
+    }
+
+    /// Evaluate all driven (non-driving) constraints, updating their value parameters
+    /// to reflect the current geometry.
+    pub fn evaluate_driven_constraints(&mut self) {
+        for opt in &self.constraints {
+            if let Some(c) = opt {
+                if !c.is_driving() {
+                    c.evaluate(&mut self.store);
+                }
+            }
+        }
+    }
+
+    /// Rescale a specific constraint by re-reading the current geometry.
+    pub fn rescale_constraint(&mut self, slot: usize) {
+        if slot < self.constraints.len() {
+            if let Some(c) = &mut self.constraints[slot] {
+                c.rescale(&self.store);
+            }
+        }
+    }
+
+    /// Calculate the constraint error for all constraints with a given tag.
+    pub fn calculate_constraint_error_by_tag(&self, tag_id: i32) -> f64 {
+        let mut sum = 0.0;
+        let mut count = 0usize;
+        for opt in &self.constraints {
+            if let Some(c) = opt {
+                if c.tag() == tag_id {
+                    let e = c.error(&self.store);
+                    sum += e * e;
+                    count += 1;
+                }
+            }
+        }
+        if count == 1 {
+            sum.sqrt().copysign(
+                self.constraints.iter()
+                    .filter_map(|o| o.as_ref())
+                    .find(|c| c.tag() == tag_id)
+                    .unwrap()
+                    .error(&self.store),
+            )
+        } else if count > 1 {
+            (sum / count as f64).sqrt()
+        } else {
+            0.0
         }
     }
 }
@@ -879,5 +966,62 @@ mod tests {
         // Reset to reference should bring it back to 10
         sys.reset_to_reference();
         assert_abs_diff_eq!(sys.store().get(x), 10.0, epsilon = 1e-8);
+    }
+
+    #[test]
+    fn undo_solution() {
+        let mut store = ParamStore::new();
+        let x = store.push(5.0);
+        let mut sys = System::new(store, SolverConfig::default());
+        sys.declare_unknowns(vec![x]);
+        sys.add_constraint(Box::new(ParamTarget::new(x, 0.0, 1)));
+        sys.init_solution();
+        sys.solve_default();
+        assert_abs_diff_eq!(sys.store().get(x), 0.0, epsilon = 1e-8);
+        sys.undo_solution();
+        assert_abs_diff_eq!(sys.store().get(x), 5.0, epsilon = 1e-8);
+    }
+
+    #[test]
+    fn remove_constraint_and_re_solve() {
+        let mut store = ParamStore::new();
+        let x = store.push(0.0);
+        let mut sys = System::new(store, SolverConfig::default());
+        sys.declare_unknowns(vec![x]);
+        let slot0 = sys.add_constraint(Box::new(ParamTarget::new(x, 3.0, 1)));
+        let slot1 = sys.add_constraint(Box::new(ParamTarget::new(x, 7.0, 2)));
+        sys.init_solution();
+        sys.solve_default();
+        // With conflicting constraints, result is somewhere between 3 and 7
+        // Remove the second constraint and re-solve → should converge to 3
+        sys.remove_constraint(slot1);
+        sys.declare_unknowns(vec![x]);
+        sys.init_solution();
+        sys.solve_default();
+        assert_abs_diff_eq!(sys.store().get(x), 3.0, epsilon = 1e-8);
+        let _ = slot0; // used to verify add_constraint returns index
+    }
+
+    #[test]
+    fn calculate_constraint_error_by_tag_test() {
+        let mut store = ParamStore::new();
+        let x = store.push(5.0); // not at target
+        let mut sys = System::new(store, SolverConfig::default());
+        // x should be at 3 → error = 5-3=2
+        sys.add_constraint(Box::new(ParamTarget::new(x, 3.0, 42)));
+        let err = sys.calculate_constraint_error_by_tag(42);
+        assert_abs_diff_eq!(err, 2.0, epsilon = 1e-10);
+        // No constraints with tag 99
+        assert_abs_diff_eq!(sys.calculate_constraint_error_by_tag(99), 0.0, epsilon = 1e-10);
+    }
+
+    #[test]
+    fn rescale_constraint_test() {
+        let mut store = ParamStore::new();
+        let x = store.push(1.0);
+        let mut sys = System::new(store, SolverConfig::default());
+        let slot = sys.add_constraint(Box::new(ParamTarget::new(x, 5.0, 1)));
+        // Rescale should not panic
+        sys.rescale_constraint(slot);
     }
 }

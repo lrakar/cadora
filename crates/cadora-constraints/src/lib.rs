@@ -33,6 +33,11 @@ pub trait Constraint {
 
     /// Whether this constraint is an internal-alignment constraint (excluded from conflict reporting).
     fn is_internal_alignment(&self) -> bool { false }
+
+    /// Limit line-search step to prevent overshoot.
+    /// `dir` maps each parameter index to its step component; `lim` is the current step limit.
+    /// Returns the (possibly tighter) limit.
+    fn max_step(&self, _store: &ParamStore, _dir: &[(ParamIdx, f64)], lim: f64) -> f64 { lim }
 }
 
 // ---------------------------------------------------------------------------
@@ -201,6 +206,28 @@ impl Constraint for ConstraintP2PDistance {
         let v = self.value(store);
         store.set(self.distance(), v);
     }
+
+    fn max_step(&self, store: &ParamStore, dir: &[(ParamIdx, f64)], mut lim: f64) -> f64 {
+        let find = |p: ParamIdx| dir.iter().find(|(k, _)| *k == p).map(|(_, v)| *v).unwrap_or(0.0);
+        // Prevent distance from going negative
+        let dd = find(self.distance());
+        if dd < 0.0 {
+            let dist_val = store.get(self.distance());
+            lim = lim.min(-dist_val / dd);
+        }
+        // Prevent points from jumping over each other
+        let dpx = find(self.p2x()) - find(self.p1x());
+        let dpy = find(self.p2y()) - find(self.p1y());
+        let dp = (dpx * dpx + dpy * dpy).sqrt();
+        if dp > 0.0 {
+            let dx = store.get(self.p1x()) - store.get(self.p2x());
+            let dy = store.get(self.p1y()) - store.get(self.p2y());
+            let d = (dx * dx + dy * dy).sqrt();
+            let dist = store.get(self.distance());
+            lim = lim.min(d.max(dist) / dp);
+        }
+        lim
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -280,6 +307,15 @@ impl Constraint for ConstraintP2PAngle {
         let dx = store.get(self.p2x()) - store.get(self.p1x());
         let dy = store.get(self.p2y()) - store.get(self.p1y());
         store.set(self.angle(), dy.atan2(dx) - self.da);
+    }
+
+    fn max_step(&self, _store: &ParamStore, dir: &[(ParamIdx, f64)], mut lim: f64) -> f64 {
+        let da = dir.iter().find(|(k, _)| *k == self.angle()).map(|(_, v)| *v).unwrap_or(0.0).abs();
+        let limit = std::f64::consts::PI / 18.0; // 10 degrees
+        if da > limit {
+            lim = lim.min(limit / da);
+        }
+        lim
     }
 }
 
@@ -365,6 +401,40 @@ impl Constraint for ConstraintP2LDistance {
     fn evaluate(&self, store: &mut ParamStore) {
         let v = self.value(store);
         store.set(self.distance(), v);
+    }
+
+    fn max_step(&self, store: &ParamStore, dir: &[(ParamIdx, f64)], mut lim: f64) -> f64 {
+        let find = |p: ParamIdx| dir.iter().find(|(k, _)| *k == p).map(|(_, v)| *v).unwrap_or(0.0);
+        // Prevent distance from going negative
+        let dd = find(self.distance());
+        if dd < 0.0 {
+            let dist_val = store.get(self.distance());
+            lim = lim.min(-dist_val / dd);
+        }
+        // Limit area change rate to prevent point crossing the line
+        let (x0, y0) = (store.get(self.p0x()), store.get(self.p0y()));
+        let (x1, y1) = (store.get(self.p1x()), store.get(self.p1y()));
+        let (x2, y2) = (store.get(self.p2x()), store.get(self.p2y()));
+        let dx = x2 - x1;
+        let dy = y2 - y1;
+        let line_len = (dx * dx + dy * dy).sqrt();
+        let area = (-x0 * dy + y0 * dx + x1 * y2 - x2 * y1).abs();
+        let dp0x = find(self.p0x());
+        let dp0y = find(self.p0y());
+        let dp1x = find(self.p1x());
+        let dp1y = find(self.p1y());
+        let dp2x = find(self.p2x());
+        let dp2y = find(self.p2y());
+        let darea = (-dp0x * dy + dp0y * dx
+            + dp1x * (y2 - y0) + dp1y * (x0 - x2)
+            + dp2x * (y0 - y1) + dp2y * (x1 - x0)).abs();
+        if darea > 0.0 {
+            let threshold = (0.3 * store.get(self.distance()) * line_len).max(0.3 * area);
+            if darea > threshold && threshold > 0.0 {
+                lim = lim.min(threshold / darea);
+            }
+        }
+        lim
     }
 }
 
@@ -719,6 +789,15 @@ impl Constraint for ConstraintL2LAngle {
         let x = dx2 * ca + dy2 * sa;
         let y = -dx2 * sa + dy2 * ca;
         store.set(self.angle(), y.atan2(x));
+    }
+
+    fn max_step(&self, _store: &ParamStore, dir: &[(ParamIdx, f64)], mut lim: f64) -> f64 {
+        let da = dir.iter().find(|(k, _)| *k == self.angle()).map(|(_, v)| *v).unwrap_or(0.0).abs();
+        let limit = std::f64::consts::PI / 18.0; // 10 degrees
+        if da > limit {
+            lim = lim.min(limit / da);
+        }
+        lim
     }
 }
 
@@ -3944,5 +4023,50 @@ mod tests {
             s.set(param, orig);
             assert_abs_diff_eq!(g, (e1 - e0) / eps, epsilon = 1e-4,);
         }
+    }
+
+    #[test]
+    fn max_step_p2p_distance_prevents_negative() {
+        let mut s = ParamStore::new();
+        let p1 = Point { x: s.push(0.0), y: s.push(0.0) };
+        let p2 = Point { x: s.push(3.0), y: s.push(0.0) };
+        let d = s.push(2.0);
+        let c = ConstraintP2PDistance::new(p1, p2, d, 1, true);
+        // Direction that would make distance negative
+        let dir = vec![(d, -10.0)];
+        let lim = c.max_step(&s, &dir, 1e10);
+        // lim * 10 should not exceed 2 (current distance value)
+        assert!(lim <= 0.2 + 1e-10);
+    }
+
+    #[test]
+    fn max_step_p2p_angle_limits_step() {
+        let mut s = ParamStore::new();
+        let p1 = Point { x: s.push(0.0), y: s.push(0.0) };
+        let p2 = Point { x: s.push(1.0), y: s.push(0.0) };
+        let a = s.push(0.0);
+        let c = ConstraintP2PAngle::new(p1, p2, a, 0.0, 1, true);
+        // Direction that changes angle by 1 radian per unit step
+        let dir = vec![(a, 1.0)];
+        let lim = c.max_step(&s, &dir, 1e10);
+        // Should limit to ~PI/18 ≈ 0.1745
+        assert!(lim < 0.18);
+        assert!(lim > 0.17);
+    }
+
+    #[test]
+    fn max_step_l2l_angle_limits_step() {
+        let mut s = ParamStore::new();
+        let l1p1 = Point { x: s.push(0.0), y: s.push(0.0) };
+        let l1p2 = Point { x: s.push(1.0), y: s.push(0.0) };
+        let l2p1 = Point { x: s.push(0.0), y: s.push(0.0) };
+        let l2p2 = Point { x: s.push(0.0), y: s.push(1.0) };
+        let a = s.push(std::f64::consts::FRAC_PI_2);
+        let c = ConstraintL2LAngle::new(l1p1, l1p2, l2p1, l2p2, a, 1, true);
+        let dir = vec![(a, 2.0)];
+        let lim = c.max_step(&s, &dir, 1e10);
+        // With step rate 2 rad/unit, limit should be about PI/36 ≈ 0.0873
+        assert!(lim < 0.09);
+        assert!(lim > 0.08);
     }
 }
