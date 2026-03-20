@@ -13,6 +13,7 @@ members = [
     "crates/cadora-document",
     "crates/cadora-brep",
     "crates/cadora-partdesign",
+    "crates/cadora-io",
 ]
 
 [workspace.package]

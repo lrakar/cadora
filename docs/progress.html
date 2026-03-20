@@ -864,16 +864,16 @@
 <!-- ==================== H ==================== -->
 <div class="phase">
   <div class="phase-header" onclick="this.parentElement.classList.toggle('open')">
-    <h3><span class="arrow">&#9654;</span> H &mdash; File Format &amp; Persistence <span class="phase-badge badge-todo">Todo</span></h3>
-    <span class="phase-pct">0 / 4</span>
+    <h3><span class="arrow">&#9654;</span> H &mdash; File Format &amp; Persistence <span class="phase-badge badge-done">Done</span></h3>
+    <span class="phase-pct">4 / 4</span>
   </div>
   <div class="phase-body">
     <table>
       <tr><th></th><th>Task</th><th>Crate</th><th>Source Reference</th></tr>
-      <tr><td><span class="pending">&#9744;</span></td><td>Project file format (.cadora &mdash; ZIP archive with JSON metadata + binary shapes)</td><td><span class="crate-tag">cadora-io</span></td><td class="source-ref">.FCStd format</td></tr>
-      <tr><td><span class="pending">&#9744;</span></td><td>STEP import/export</td><td><span class="crate-tag">cadora-io</span></td><td class="source-ref">Import/Export STEP</td></tr>
-      <tr><td><span class="pending">&#9744;</span></td><td>STL import/export (mesh)</td><td><span class="crate-tag">cadora-io</span></td><td class="source-ref">Mesh::MeshObject</td></tr>
-      <tr><td><span class="pending">&#9744;</span></td><td>IGES import (legacy support)</td><td><span class="crate-tag">cadora-io</span></td><td class="source-ref">Import IGES</td></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>Project file format (.cadora &mdash; ZIP archive with JSON metadata + STEP shapes) &mdash; ProjectWriter/ProjectReader, ObjectMeta, roundtrip save/load</td><td><span class="crate-tag">cadora-io</span></td><td class="source-ref">.FCStd format</td></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>STEP import/export &mdash; truck-stepio CompressedSolid export, Table parser import with MeshableShape tessellation, single &amp; multi-shape, file I/O</td><td><span class="crate-tag">cadora-io</span></td><td class="source-ref">Import/Export STEP</td></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>STL import/export (mesh) &mdash; binary &amp; ASCII format via truck-polymesh, shape tessellation, StlFace conversion, roundtrip verified</td><td><span class="crate-tag">cadora-io</span></td><td class="source-ref">Mesh::MeshObject</td></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>IGES import (legacy support) &mdash; IGES parser (D/P/G/S sections), entity 128 rational B-spline surface tessellation, Cox&ndash;de Boor basis evaluation</td><td><span class="crate-tag">cadora-io</span></td><td class="source-ref">Import IGES</td></tr>
     </table>
   </div>
 </div>
