@@ -10,6 +10,8 @@ pub mod sketch;
 pub mod editing;
 pub mod analysis;
 pub mod operations;
+pub mod external;
+pub mod persistence;
 
 pub use types::*;
 pub use geometry::GeoDef;
@@ -17,3 +19,5 @@ pub use constraint::SketchConstraint;
 pub use sketch::Sketch;
 pub use analysis::DetectedConstraint;
 pub use operations::GeoOpResult;
+pub use external::{ExternalFlags, ExternalRef};
+pub use persistence::{SketchSnapshot, ValidationIssue, ValidationKind};

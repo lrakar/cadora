@@ -444,19 +444,19 @@
 <!-- ==================== PHASE A7 ==================== -->
 <div class="phase">
   <div class="phase-header" onclick="this.parentElement.classList.toggle('open')">
-    <h3><span class="arrow">&#9654;</span> A7 — External Geometry &amp; Serialization <span class="phase-badge badge-todo">Todo</span></h3>
-    <span class="phase-pct">0 / 7</span>
+    <h3><span class="arrow">&#9654;</span> A7 — External Geometry &amp; Serialization <span class="phase-badge badge-done">Done</span></h3>
+    <span class="phase-pct">7 / 7</span>
   </div>
   <div class="phase-body">
     <table>
       <tr><th></th><th>Task</th><th>Crate</th><th>Source Reference</th></tr>
-      <tr><td><span class="pending">&#9744;</span></td><td>External geometry references (add_external, del_external — edges from 3D model)</td><td><span class="crate-tag">cadora-sketch</span></td><td class="source-ref">SketchObject addExternal/delExternal</td></tr>
-      <tr><td><span class="pending">&#9744;</span></td><td>External geometry rebuild (rebuildExternalGeometry, sync with 3D model changes)</td><td><span class="crate-tag">cadora-sketch</span></td><td class="source-ref">SketchObject rebuildExternalGeometry</td></tr>
-      <tr><td><span class="pending">&#9744;</span></td><td>Sketch serialization — save to JSON/binary (all geometry + constraints + metadata)</td><td><span class="crate-tag">cadora-sketch</span></td><td class="source-ref">SketchObject Save/Restore</td></tr>
-      <tr><td><span class="pending">&#9744;</span></td><td>Sketch deserialization — load from JSON/binary, reconstruct GCS state</td><td><span class="crate-tag">cadora-sketch</span></td><td class="source-ref">SketchObject Save/Restore</td></tr>
-      <tr><td><span class="pending">&#9744;</span></td><td>Undo/Redo stack (snapshot-based or command-pattern)</td><td><span class="crate-tag">cadora-sketch</span></td><td class="source-ref">SketchObject transaction support</td></tr>
-      <tr><td><span class="pending">&#9744;</span></td><td>Validation &amp; cleanup (detectDegeneratedGeometries, validateConstraints, consistency checks)</td><td><span class="crate-tag">cadora-sketch</span></td><td class="source-ref">SketchObject validation methods</td></tr>
-      <tr><td><span class="pending">&#9744;</span></td><td>Tests: serialize/deserialize roundtrip, undo/redo, external geometry, validation</td><td><span class="crate-tag">cadora-sketch</span></td><td class="source-ref">—</td></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>External geometry references (add_external, del_external, update_external)</td><td><span class="crate-tag">cadora-sketch</span></td><td class="source-ref">SketchObject addExternal/delExternal</td></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>External geometry rebuild (rebuild_external with resolver callback)</td><td><span class="crate-tag">cadora-sketch</span></td><td class="source-ref">SketchObject rebuildExternalGeometry</td></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>Sketch serialization — save_snapshot() to SketchSnapshot struct</td><td><span class="crate-tag">cadora-sketch</span></td><td class="source-ref">SketchObject Save/Restore</td></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>Sketch deserialization — load_snapshot() restores full state</td><td><span class="crate-tag">cadora-sketch</span></td><td class="source-ref">SketchObject Save/Restore</td></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>Undo/Redo stack (snapshot-based: push_undo, undo, redo)</td><td><span class="crate-tag">cadora-sketch</span></td><td class="source-ref">Document transaction support</td></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>Validation &amp; cleanup (validate, cleanup_invalid_constraints, remove_degenerate_geometry)</td><td><span class="crate-tag">cadora-sketch</span></td><td class="source-ref">SketchObject validation methods</td></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>Tests: serialize/deserialize roundtrip, undo/redo, external geometry, validation (14 tests)</td><td><span class="crate-tag">cadora-sketch</span></td><td class="source-ref">—</td></tr>
     </table>
   </div>
 </div>

@@ -4,6 +4,8 @@
 
 use crate::constraint::SketchConstraint;
 use crate::geometry::{GeoDef, GeoType, GeometryStore};
+use crate::external::ExternalRef;
+use crate::persistence::SketchSnapshot;
 use crate::types::*;
 
 use cadora_constraints::*;
@@ -52,6 +54,14 @@ pub struct Sketch {
     pub(crate) last_status: Option<SketchSolveStatus>,
     /// Last diagnosis result.
     pub(crate) last_diagnosis: Option<SketchDiagnosis>,
+    /// External geometry references.
+    pub(crate) external_refs: Vec<ExternalRef>,
+    /// Undo stack (snapshots of previous states).
+    pub(crate) undo_stack: Vec<SketchSnapshot>,
+    /// Redo stack (snapshots of undone states).
+    pub(crate) redo_stack: Vec<SketchSnapshot>,
+    /// Maximum undo steps.
+    pub(crate) max_undo: usize,
 }
 
 impl Sketch {
@@ -64,6 +74,10 @@ impl Sketch {
             solver_config: SolverConfig::default(),
             last_status: None,
             last_diagnosis: None,
+            external_refs: Vec::new(),
+            undo_stack: Vec::new(),
+            redo_stack: Vec::new(),
+            max_undo: 50,
         }
     }
 
@@ -756,6 +770,7 @@ impl Sketch {
     pub fn clear(&mut self) {
         self.store.clear();
         self.constraints.clear();
+        self.external_refs.clear();
         self.next_tag = 1;
         self.last_status = None;
         self.last_diagnosis = None;

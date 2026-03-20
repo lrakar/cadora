@@ -211,6 +211,34 @@ impl GeometryStore {
         self.geometries.clear();
         self.external.clear();
     }
+
+    /// Add an external geometry element, returning its GeoId (negative, <= -3).
+    pub fn add_external(&mut self, mut geo_def: GeoDef) -> GeoId {
+        geo_def.id = self.next_id;
+        self.next_id += 1;
+        let idx = self.external.len();
+        self.external.push(geo_def);
+        -(idx as GeoId + 3)
+    }
+
+    /// Remove an external geometry by GeoId. Returns true if removed.
+    pub fn remove_external(&mut self, geo_id: GeoId) -> bool {
+        if geo_id > -3 {
+            return false;
+        }
+        let idx = (-(geo_id + 3)) as usize;
+        if idx < self.external.len() {
+            self.external.remove(idx);
+            true
+        } else {
+            false
+        }
+    }
+
+    /// Number of external geometry elements.
+    pub fn external_len(&self) -> usize {
+        self.external.len()
+    }
 }
 
 #[cfg(test)]
