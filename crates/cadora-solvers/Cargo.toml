@@ -13,3 +13,4 @@ tracing = { workspace = true }
 
 [dev-dependencies]
 approx = { workspace = true }
+cadora-constraints = { workspace = true }

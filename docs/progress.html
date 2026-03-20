@@ -218,18 +218,18 @@
 <!-- ==================== PHASE 6 ==================== -->
 <div class="phase">
   <div class="phase-header" onclick="this.parentElement.classList.toggle('open')">
-    <h3><span class="arrow">&#9654;</span> Phase 6 — Solvers <span class="phase-badge badge-todo">Not Started</span></h3>
-    <span class="phase-pct">0 / 7</span>
+    <h3><span class="arrow">&#9654;</span> Phase 6 — Solvers <span class="phase-badge badge-progress">In Progress</span></h3>
+    <span class="phase-pct">5 / 7</span>
   </div>
   <div class="phase-body">
     <table>
       <tr><th></th><th>Task</th><th>Crate</th><th>Source Reference</th></tr>
-      <tr><td><span class="pending">&#9675;</span></td><td>lineSearch() — cubic bracketing free function</td><td><span class="crate-tag">cadora-solvers</span></td><td class="source-ref">GCS.cpp:5600-5700</td></tr>
-      <tr><td><span class="pending">&#9675;</span></td><td>BFGS solver (solve_BFGS)</td><td><span class="crate-tag">cadora-solvers</span></td><td class="source-ref">GCS.cpp:1948-2074</td></tr>
-      <tr><td><span class="pending">&#9675;</span></td><td>Levenberg-Marquardt (solve_LM)</td><td><span class="crate-tag">cadora-solvers</span></td><td class="source-ref">GCS.cpp:2075-2253</td></tr>
-      <tr><td><span class="pending">&#9675;</span></td><td>DogLeg (solve_DL, all 3 Gauss step variants)</td><td><span class="crate-tag">cadora-solvers</span></td><td class="source-ref">GCS.cpp:2254-2519</td></tr>
-      <tr><td><span class="pending">&#9675;</span></td><td>qp_eq (equality-constrained QP)</td><td><span class="crate-tag">cadora-solvers</span></td><td class="source-ref">qp_eq.cpp:1-74</td></tr>
-      <tr><td><span class="pending">&#9675;</span></td><td>Dual-system SQP solver (solve A+B)</td><td><span class="crate-tag">cadora-solvers</span></td><td class="source-ref">GCS.cpp:4700-4800</td></tr>
+      <tr><td><span class="check">&#10003;</span></td><td>lineSearch() — quadratic-interpolation bracketing (in cadora-subsystem)</td><td><span class="crate-tag">cadora-subsystem</span></td><td class="source-ref">GCS.cpp:5600-5700</td></tr>
+      <tr><td><span class="check">&#10003;</span></td><td>BFGS solver (solve_BFGS) — identity Hessian approx, BFGS update, convergence</td><td><span class="crate-tag">cadora-solvers</span></td><td class="source-ref">GCS.cpp:1948-2074</td></tr>
+      <tr><td><span class="check">&#10003;</span></td><td>Levenberg-Marquardt (solve_LM) — J^TJ+μI, adaptive damping, dF/dL ratio</td><td><span class="crate-tag">cadora-solvers</span></td><td class="source-ref">GCS.cpp:2075-2253</td></tr>
+      <tr><td><span class="check">&#10003;</span></td><td>DogLeg (solve_DL, all 3 Gauss step variants: FullPivLu, LeastNormFullPivLu, LeastNormLdlt)</td><td><span class="crate-tag">cadora-solvers</span></td><td class="source-ref">GCS.cpp:2254-2519</td></tr>
+      <tr><td><span class="check">&#10003;</span></td><td>qp_eq (equality-constrained QP, null-space projector via SVD)</td><td><span class="crate-tag">cadora-solvers</span></td><td class="source-ref">qp_eq.cpp:1-74</td></tr>
+      <tr><td><span class="pending">&#9675;</span></td><td>Dual-system SQP solver (solve A+B)</td><td><span class="crate-tag">cadora-solvers</span></td><td class="source-ref">GCS.cpp:4516-4700</td></tr>
       <tr><td><span class="pending">&#9675;</span></td><td>Solver cross-validation vs C++ (known sketches)</td><td><span class="crate-tag">cadora-solvers</span></td><td class="source-ref">—</td></tr>
     </table>
   </div>
@@ -299,8 +299,8 @@
 <script>
 // Auto-calculate overall progress from checkmarks
 document.addEventListener('DOMContentLoaded', () => {
-  const done = document.querySelectorAll('.check').length;
-  const total = document.querySelectorAll('.check, .pending').length;
+  const done = document.querySelectorAll('.check, .done').length;
+  const total = document.querySelectorAll('.check, .done, .pending').length;
   document.getElementById('overallPct').textContent = done;
   document.getElementById('overallBar').style.width = Math.round(done/total*100) + '%';
 });
