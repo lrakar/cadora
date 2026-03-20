@@ -25,6 +25,24 @@ pub trait Curve {
         deriv_param: Option<ParamIdx>,
     ) -> DeriVector2;
 
+    /// Surface normal at curve parameter `u`.
+    /// Default: evaluates curve at `u` to get a point, then calls `normal_at_point`.
+    /// The point coordinates are NOT differentiated — only curve params carry derivatives.
+    fn normal_at_param(
+        &self,
+        store: &ParamStore,
+        u: f64,
+        deriv_param: Option<ParamIdx>,
+    ) -> DeriVector2 {
+        let pt_dv = self.value(store, u, 0.0, None);
+        // Clone store and push temporary point coords so they won't match any deriv_param.
+        let mut tmp = store.clone();
+        let px = tmp.push(pt_dv.x);
+        let py = tmp.push(pt_dv.y);
+        let at = Point::new(px, py);
+        self.normal_at_point(&tmp, at, deriv_param)
+    }
+
     /// All parameter indices this geometry depends on.
     fn params(&self) -> Vec<ParamIdx>;
 }

@@ -4,7 +4,7 @@
 //! Port of planegcs `Constraints.h` / `Constraints.cpp`.
 
 use cadora_core::{ParamIdx, ParamStore, Tag};
-use cadora_geo::{Ellipse, Hyperbola, Arc, Line, Curve};
+use cadora_geo::{Ellipse, Hyperbola, Arc, Line, Circle, Curve};
 use cadora_math::DeriVector2;
 use cadora_core::Point;
 
@@ -1731,6 +1731,962 @@ impl Constraint for ConstraintEqualLineLength {
     fn is_driving(&self) -> bool { self.driving }
 }
 
+// ===========================================================================
+// Phase 4 — Advanced Constraints
+// ===========================================================================
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+/// `atan2(y,x)` – based angle between two 2-D vectors.
+/// Equivalent to rotating v1→align with x-axis, then measuring atan2(v2_rot).
+fn vector_angle_helper(x1: f64, y1: f64, x2: f64, y2: f64) -> f64 {
+    let a = y1.atan2(x1);
+    let (sa, ca) = a.sin_cos();
+    let x = x2 * ca + y2 * sa;
+    let y = -x2 * sa + y2 * ca;
+    y.atan2(x)
+}
+
+/// Computes d(atan2(n.y, n.x))/d(param) from a DeriVector2 `n`.
+#[inline]
+fn datan2_d(n: &DeriVector2) -> f64 {
+    let len2 = n.x * n.x + n.y * n.y;
+    if len2 < 1e-30 { return 0.0; }
+    (-n.dx * n.y + n.dy * n.x) / len2
+}
+
+// ---------------------------------------------------------------------------
+// AngleViaPoint: angle between normals of two curves at a single point
+// ---------------------------------------------------------------------------
+
+pub struct ConstraintAngleViaPoint {
+    pvec: Vec<ParamIdx>,
+    crv1: Box<dyn Curve>,
+    crv2: Box<dyn Curve>,
+    poa: Point,
+    scale: f64,
+    pub tag: Tag,
+    pub driving: bool,
+}
+
+impl ConstraintAngleViaPoint {
+    pub fn new(
+        crv1: Box<dyn Curve>,
+        crv2: Box<dyn Curve>,
+        angle: ParamIdx,
+        poa: Point,
+        tag: Tag,
+        driving: bool,
+    ) -> Self {
+        let mut pvec = vec![angle, poa.x, poa.y];
+        pvec.extend(crv1.params());
+        pvec.extend(crv2.params());
+        Self { pvec, crv1, crv2, poa, scale: 1.0, tag, driving }
+    }
+
+    #[inline]
+    fn angle_idx(&self) -> ParamIdx { self.pvec[0] }
+}
+
+impl Constraint for ConstraintAngleViaPoint {
+    fn error(&self, store: &ParamStore) -> f64 {
+        let ang = store.get(self.angle_idx());
+        let n1 = self.crv1.normal_at_point(store, self.poa, None);
+        let n2 = self.crv2.normal_at_point(store, self.poa, None);
+        let (sa, ca) = ang.sin_cos();
+        let n1r_x = n1.x * ca - n1.y * sa;
+        let n1r_y = n1.x * sa + n1.y * ca;
+        let err = (-n2.x * n1r_y + n2.y * n1r_x).atan2(n2.x * n1r_x + n2.y * n1r_y);
+        self.scale * err
+    }
+
+    fn grad(&self, store: &ParamStore, param: ParamIdx) -> f64 {
+        if !self.pvec.contains(&param) { return 0.0; }
+        let mut deriv = 0.0;
+        if param == self.angle_idx() { deriv -= 1.0; }
+        let n1 = self.crv1.normal_at_point(store, self.poa, Some(param));
+        let n2 = self.crv2.normal_at_point(store, self.poa, Some(param));
+        deriv -= datan2_d(&n1);
+        deriv += datan2_d(&n2);
+        self.scale * deriv
+    }
+
+    fn params(&self) -> &[ParamIdx] { &self.pvec }
+    fn tag(&self) -> Tag { self.tag }
+    fn is_driving(&self) -> bool { self.driving }
+}
+
+// ---------------------------------------------------------------------------
+// AngleViaTwoPoints: angle between normals of two curves at two different points
+// ---------------------------------------------------------------------------
+
+pub struct ConstraintAngleViaTwoPoints {
+    pvec: Vec<ParamIdx>,
+    crv1: Box<dyn Curve>,
+    crv2: Box<dyn Curve>,
+    poa1: Point,
+    poa2: Point,
+    scale: f64,
+    pub tag: Tag,
+    pub driving: bool,
+}
+
+impl ConstraintAngleViaTwoPoints {
+    pub fn new(
+        crv1: Box<dyn Curve>,
+        crv2: Box<dyn Curve>,
+        angle: ParamIdx,
+        poa1: Point,
+        poa2: Point,
+        tag: Tag,
+        driving: bool,
+    ) -> Self {
+        let mut pvec = vec![angle, poa1.x, poa1.y, poa2.x, poa2.y];
+        pvec.extend(crv1.params());
+        pvec.extend(crv2.params());
+        Self { pvec, crv1, crv2, poa1, poa2, scale: 1.0, tag, driving }
+    }
+
+    #[inline]
+    fn angle_idx(&self) -> ParamIdx { self.pvec[0] }
+}
+
+impl Constraint for ConstraintAngleViaTwoPoints {
+    fn error(&self, store: &ParamStore) -> f64 {
+        let ang = store.get(self.angle_idx());
+        let n1 = self.crv1.normal_at_point(store, self.poa1, None);
+        let n2 = self.crv2.normal_at_point(store, self.poa2, None);
+        let (sa, ca) = ang.sin_cos();
+        let n1r_x = n1.x * ca - n1.y * sa;
+        let n1r_y = n1.x * sa + n1.y * ca;
+        let err = (-n2.x * n1r_y + n2.y * n1r_x).atan2(n2.x * n1r_x + n2.y * n1r_y);
+        self.scale * err
+    }
+
+    fn grad(&self, store: &ParamStore, param: ParamIdx) -> f64 {
+        if !self.pvec.contains(&param) { return 0.0; }
+        let mut deriv = 0.0;
+        if param == self.angle_idx() { deriv -= 1.0; }
+        let n1 = self.crv1.normal_at_point(store, self.poa1, Some(param));
+        let n2 = self.crv2.normal_at_point(store, self.poa2, Some(param));
+        deriv -= datan2_d(&n1);
+        deriv += datan2_d(&n2);
+        self.scale * deriv
+    }
+
+    fn params(&self) -> &[ParamIdx] { &self.pvec }
+    fn tag(&self) -> Tag { self.tag }
+    fn is_driving(&self) -> bool { self.driving }
+
+    fn evaluate(&self, store: &mut ParamStore) {
+        let n1 = self.crv1.normal_at_point(store, self.poa1, None);
+        let n2 = self.crv2.normal_at_point(store, self.poa2, None);
+        store.set(self.angle_idx(), vector_angle_helper(n1.x, n1.y, n2.x, n2.y));
+    }
+}
+
+// ---------------------------------------------------------------------------
+// AngleViaPointAndParam: crv1 normal at param, crv2 normal at point
+// ---------------------------------------------------------------------------
+
+pub struct ConstraintAngleViaPointAndParam {
+    pvec: Vec<ParamIdx>,
+    crv1: Box<dyn Curve>,
+    crv2: Box<dyn Curve>,
+    poa: Point,
+    scale: f64,
+    pub tag: Tag,
+    pub driving: bool,
+}
+
+impl ConstraintAngleViaPointAndParam {
+    pub fn new(
+        crv1: Box<dyn Curve>,
+        crv2: Box<dyn Curve>,
+        angle: ParamIdx,
+        poa: Point,
+        cparam: ParamIdx,
+        tag: Tag,
+        driving: bool,
+    ) -> Self {
+        // pvec layout: [angle, poa.x, poa.y, cparam, ...crv1 params, ...crv2 params]
+        let mut pvec = vec![angle, poa.x, poa.y, cparam];
+        pvec.extend(crv1.params());
+        pvec.extend(crv2.params());
+        Self { pvec, crv1, crv2, poa, scale: 1.0, tag, driving }
+    }
+
+    #[inline] fn angle_idx(&self) -> ParamIdx { self.pvec[0] }
+    #[inline] fn cparam_idx(&self) -> ParamIdx { self.pvec[3] }
+}
+
+impl Constraint for ConstraintAngleViaPointAndParam {
+    fn error(&self, store: &ParamStore) -> f64 {
+        let ang = store.get(self.angle_idx());
+        let u = store.get(self.cparam_idx());
+        let n1 = self.crv1.normal_at_param(store, u, None);
+        let n2 = self.crv2.normal_at_point(store, self.poa, None);
+        let (sa, ca) = ang.sin_cos();
+        let n1r_x = n1.x * ca - n1.y * sa;
+        let n1r_y = n1.x * sa + n1.y * ca;
+        let err = (-n2.x * n1r_y + n2.y * n1r_x).atan2(n2.x * n1r_x + n2.y * n1r_y);
+        self.scale * err
+    }
+
+    fn grad(&self, store: &ParamStore, param: ParamIdx) -> f64 {
+        if !self.pvec.contains(&param) { return 0.0; }
+        let mut deriv = 0.0;
+        if param == self.angle_idx() { deriv -= 1.0; }
+        let u = store.get(self.cparam_idx());
+        let n1 = self.crv1.normal_at_param(store, u, Some(param));
+        let n2 = self.crv2.normal_at_point(store, self.poa, Some(param));
+        deriv -= datan2_d(&n1);
+        deriv += datan2_d(&n2);
+        self.scale * deriv
+    }
+
+    fn params(&self) -> &[ParamIdx] { &self.pvec }
+    fn tag(&self) -> Tag { self.tag }
+    fn is_driving(&self) -> bool { self.driving }
+
+    fn evaluate(&self, store: &mut ParamStore) {
+        let u = store.get(self.cparam_idx());
+        let n1 = self.crv1.normal_at_param(store, u, None);
+        let n2 = self.crv2.normal_at_point(store, self.poa, None);
+        store.set(self.angle_idx(), vector_angle_helper(n1.x, n1.y, n2.x, n2.y));
+    }
+}
+
+// ---------------------------------------------------------------------------
+// AngleViaPointAndTwoParams: both normals at curve parameters
+// ---------------------------------------------------------------------------
+
+pub struct ConstraintAngleViaPointAndTwoParams {
+    pvec: Vec<ParamIdx>,
+    crv1: Box<dyn Curve>,
+    crv2: Box<dyn Curve>,
+    scale: f64,
+    pub tag: Tag,
+    pub driving: bool,
+}
+
+impl ConstraintAngleViaPointAndTwoParams {
+    pub fn new(
+        crv1: Box<dyn Curve>,
+        crv2: Box<dyn Curve>,
+        angle: ParamIdx,
+        poa: Point,
+        cparam1: ParamIdx,
+        cparam2: ParamIdx,
+        tag: Tag,
+        driving: bool,
+    ) -> Self {
+        // pvec: [angle, poa.x, poa.y, cparam1, cparam2, ...crv1, ...crv2]
+        let mut pvec = vec![angle, poa.x, poa.y, cparam1, cparam2];
+        pvec.extend(crv1.params());
+        pvec.extend(crv2.params());
+        Self { pvec, crv1, crv2, scale: 1.0, tag, driving }
+    }
+
+    #[inline] fn angle_idx(&self) -> ParamIdx { self.pvec[0] }
+    #[inline] fn cparam1_idx(&self) -> ParamIdx { self.pvec[3] }
+    #[inline] fn cparam2_idx(&self) -> ParamIdx { self.pvec[4] }
+}
+
+impl Constraint for ConstraintAngleViaPointAndTwoParams {
+    fn error(&self, store: &ParamStore) -> f64 {
+        let ang = store.get(self.angle_idx());
+        let u1 = store.get(self.cparam1_idx());
+        let u2 = store.get(self.cparam2_idx());
+        let n1 = self.crv1.normal_at_param(store, u1, None);
+        let n2 = self.crv2.normal_at_param(store, u2, None);
+        let (sa, ca) = ang.sin_cos();
+        let n1r_x = n1.x * ca - n1.y * sa;
+        let n1r_y = n1.x * sa + n1.y * ca;
+        let err = (-n2.x * n1r_y + n2.y * n1r_x).atan2(n2.x * n1r_x + n2.y * n1r_y);
+        self.scale * err
+    }
+
+    fn grad(&self, store: &ParamStore, param: ParamIdx) -> f64 {
+        if !self.pvec.contains(&param) { return 0.0; }
+        let mut deriv = 0.0;
+        if param == self.angle_idx() { deriv -= 1.0; }
+        let u1 = store.get(self.cparam1_idx());
+        let u2 = store.get(self.cparam2_idx());
+        let n1 = self.crv1.normal_at_param(store, u1, Some(param));
+        let n2 = self.crv2.normal_at_param(store, u2, Some(param));
+        deriv -= datan2_d(&n1);
+        deriv += datan2_d(&n2);
+        self.scale * deriv
+    }
+
+    fn params(&self) -> &[ParamIdx] { &self.pvec }
+    fn tag(&self) -> Tag { self.tag }
+    fn is_driving(&self) -> bool { self.driving }
+
+    fn evaluate(&self, store: &mut ParamStore) {
+        let u1 = store.get(self.cparam1_idx());
+        let u2 = store.get(self.cparam2_idx());
+        let n1 = self.crv1.normal_at_param(store, u1, None);
+        let n2 = self.crv2.normal_at_param(store, u2, None);
+        store.set(self.angle_idx(), vector_angle_helper(n1.x, n1.y, n2.x, n2.y));
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Snell: n1*sin(θ1) = n2*sin(θ2) at refraction point
+// ---------------------------------------------------------------------------
+
+pub struct ConstraintSnell {
+    pvec: Vec<ParamIdx>,
+    ray1: Box<dyn Curve>,
+    ray2: Box<dyn Curve>,
+    boundary: Box<dyn Curve>,
+    poa: Point,
+    flipn1: bool,
+    flipn2: bool,
+    scale: f64,
+    pub tag: Tag,
+    pub driving: bool,
+}
+
+impl ConstraintSnell {
+    pub fn new(
+        ray1: Box<dyn Curve>,
+        ray2: Box<dyn Curve>,
+        boundary: Box<dyn Curve>,
+        n1: ParamIdx,
+        n2: ParamIdx,
+        poa: Point,
+        flipn1: bool,
+        flipn2: bool,
+        tag: Tag,
+        driving: bool,
+    ) -> Self {
+        let mut pvec = vec![n1, n2, poa.x, poa.y];
+        pvec.extend(ray1.params());
+        pvec.extend(ray2.params());
+        pvec.extend(boundary.params());
+        Self { pvec, ray1, ray2, boundary, poa, flipn1, flipn2, scale: 1.0, tag, driving }
+    }
+
+    #[inline] fn n1_idx(&self) -> ParamIdx { self.pvec[0] }
+    #[inline] fn n2_idx(&self) -> ParamIdx { self.pvec[1] }
+
+    fn errorgrad_impl(&self, store: &ParamStore, deriv_param: Option<ParamIdx>) -> (f64, f64) {
+        let tang1 = self.ray1.normal_at_point(store, self.poa, deriv_param)
+            .rotate90cw().normalized();
+        let tang2 = self.ray2.normal_at_point(store, self.poa, deriv_param)
+            .rotate90cw().normalized();
+        let tang_b = self.boundary.normal_at_point(store, self.poa, deriv_param)
+            .rotate90cw().normalized();
+
+        let (mut sin1, mut dsin1) = tang1.dot(&tang_b);
+        let (mut sin2, mut dsin2) = tang2.dot(&tang_b);
+
+        if self.flipn1 { sin1 = -sin1; dsin1 = -dsin1; }
+        if self.flipn2 { sin2 = -sin2; dsin2 = -dsin2; }
+
+        let n1v = store.get(self.n1_idx());
+        let n2v = store.get(self.n2_idx());
+        let dn1 = if deriv_param == Some(self.n1_idx()) { 1.0 } else { 0.0 };
+        let dn2 = if deriv_param == Some(self.n2_idx()) { 1.0 } else { 0.0 };
+
+        let err = n1v * sin1 - n2v * sin2;
+        let grad = dn1 * sin1 + n1v * dsin1 - dn2 * sin2 - n2v * dsin2;
+        (err, grad)
+    }
+}
+
+impl Constraint for ConstraintSnell {
+    fn error(&self, store: &ParamStore) -> f64 {
+        let (err, _) = self.errorgrad_impl(store, None);
+        self.scale * err
+    }
+
+    fn grad(&self, store: &ParamStore, param: ParamIdx) -> f64 {
+        let (_, grad) = self.errorgrad_impl(store, Some(param));
+        self.scale * grad
+    }
+
+    fn params(&self) -> &[ParamIdx] { &self.pvec }
+    fn tag(&self) -> Tag { self.tag }
+    fn is_driving(&self) -> bool { self.driving }
+}
+
+// ---------------------------------------------------------------------------
+// WeightedLinearCombination: q * sum(w_i*f_i) = sum(p_i * w_i * f_i)
+//   pvec = [q, p_1..p_n, w_1..w_n]
+// ---------------------------------------------------------------------------
+
+pub struct ConstraintWeightedLinearCombination {
+    pvec: Vec<ParamIdx>,
+    factors: Vec<f64>,
+    numpoles: usize,
+    scale: f64,
+    pub tag: Tag,
+    pub driving: bool,
+}
+
+impl ConstraintWeightedLinearCombination {
+    pub fn new(
+        numpoles: usize,
+        all_params: Vec<ParamIdx>,  // [q, p_1..p_n, w_1..w_n]
+        factors: Vec<f64>,
+        tag: Tag,
+        driving: bool,
+    ) -> Self {
+        assert_eq!(all_params.len(), 2 * numpoles + 1);
+        assert_eq!(factors.len(), numpoles);
+        Self { pvec: all_params, factors, numpoles, scale: 1.0, tag, driving }
+    }
+
+    #[inline] fn thepoint(&self) -> ParamIdx { self.pvec[0] }
+    #[inline] fn poleat(&self, i: usize) -> ParamIdx { self.pvec[1 + i] }
+    #[inline] fn weightat(&self, i: usize) -> ParamIdx { self.pvec[1 + self.numpoles + i] }
+}
+
+impl Constraint for ConstraintWeightedLinearCombination {
+    fn error(&self, store: &ParamStore) -> f64 {
+        let q = store.get(self.thepoint());
+        let mut sum = 0.0;
+        let mut wsum = 0.0;
+        for i in 0..self.numpoles {
+            let wc = store.get(self.weightat(i)) * self.factors[i];
+            wsum += wc;
+            sum += store.get(self.poleat(i)) * wc;
+        }
+        self.scale * (q * wsum - sum)
+    }
+
+    fn grad(&self, store: &ParamStore, param: ParamIdx) -> f64 {
+        if param == self.thepoint() {
+            let mut wsum = 0.0;
+            for i in 0..self.numpoles {
+                wsum += store.get(self.weightat(i)) * self.factors[i];
+            }
+            return self.scale * wsum;
+        }
+        for i in 0..self.numpoles {
+            if param == self.poleat(i) {
+                return self.scale * -(store.get(self.weightat(i)) * self.factors[i]);
+            }
+            if param == self.weightat(i) {
+                let q = store.get(self.thepoint());
+                let p = store.get(self.poleat(i));
+                return self.scale * (q - p) * self.factors[i];
+            }
+        }
+        0.0
+    }
+
+    fn params(&self) -> &[ParamIdx] { &self.pvec }
+    fn tag(&self) -> Tag { self.tag }
+    fn is_driving(&self) -> bool { self.driving }
+}
+
+// ---------------------------------------------------------------------------
+// CenterOfGravity: center = sum(p_i * w_i)
+//   pvec = [center, p_1..p_n]
+// ---------------------------------------------------------------------------
+
+pub struct ConstraintCenterOfGravity {
+    pvec: Vec<ParamIdx>,
+    weights: Vec<f64>,
+    numpoints: usize,
+    scale: f64,
+    pub tag: Tag,
+    pub driving: bool,
+}
+
+impl ConstraintCenterOfGravity {
+    pub fn new(
+        all_params: Vec<ParamIdx>,  // [center, p_1..p_n]
+        weights: Vec<f64>,
+        tag: Tag,
+        driving: bool,
+    ) -> Self {
+        let numpoints = all_params.len() - 1;
+        assert_eq!(weights.len(), numpoints);
+        Self { pvec: all_params, weights, numpoints, scale: 1.0, tag, driving }
+    }
+
+    #[inline] fn thecenter(&self) -> ParamIdx { self.pvec[0] }
+    #[inline] fn pointat(&self, i: usize) -> ParamIdx { self.pvec[1 + i] }
+}
+
+impl Constraint for ConstraintCenterOfGravity {
+    fn error(&self, store: &ParamStore) -> f64 {
+        let c = store.get(self.thecenter());
+        let mut sum = 0.0;
+        for i in 0..self.numpoints {
+            sum += store.get(self.pointat(i)) * self.weights[i];
+        }
+        self.scale * (c - sum)
+    }
+
+    fn grad(&self, _store: &ParamStore, param: ParamIdx) -> f64 {
+        let mut deriv = 0.0;
+        if param == self.thecenter() {
+            deriv = 1.0;
+        }
+        for i in 0..self.numpoints {
+            if param == self.pointat(i) {
+                deriv = -self.weights[i];
+            }
+        }
+        self.scale * deriv
+    }
+
+    fn params(&self) -> &[ParamIdx] { &self.pvec }
+    fn tag(&self) -> Tag { self.tag }
+    fn is_driving(&self) -> bool { self.driving }
+}
+
+// ---------------------------------------------------------------------------
+// SlopeAtBSplineKnot: constrains slope at a C1+ knot to be parallel to a line
+//   pvec = [polexs..., poleys..., weights..., lp1x, lp1y, lp2x, lp2y]
+// ---------------------------------------------------------------------------
+
+pub struct ConstraintSlopeAtBSplineKnot {
+    pvec: Vec<ParamIdx>,
+    factors: Vec<f64>,
+    slopefactors: Vec<f64>,
+    numpoles: usize,
+    scale: f64,
+    pub tag: Tag,
+    pub driving: bool,
+}
+
+impl ConstraintSlopeAtBSplineKnot {
+    /// Creates the constraint given pre-computed factors and slopefactors.
+    /// `pvec` layout: [pole_x_0..pole_x_n, pole_y_0..pole_y_n, w_0..w_n, lp1x, lp1y, lp2x, lp2y]
+    pub fn new(
+        pvec: Vec<ParamIdx>,
+        factors: Vec<f64>,
+        slopefactors: Vec<f64>,
+        numpoles: usize,
+        tag: Tag,
+        driving: bool,
+    ) -> Self {
+        assert_eq!(pvec.len(), 3 * numpoles + 4);
+        assert_eq!(factors.len(), numpoles);
+        assert_eq!(slopefactors.len(), numpoles);
+        Self { pvec, factors, slopefactors, numpoles, scale: 1.0, tag, driving }
+    }
+
+    #[inline] fn polexat(&self, i: usize) -> ParamIdx { self.pvec[i] }
+    #[inline] fn poleyat(&self, i: usize) -> ParamIdx { self.pvec[self.numpoles + i] }
+    #[inline] fn weightat(&self, i: usize) -> ParamIdx { self.pvec[2 * self.numpoles + i] }
+    #[inline] fn linep1x(&self) -> ParamIdx { self.pvec[3 * self.numpoles] }
+    #[inline] fn linep1y(&self) -> ParamIdx { self.pvec[3 * self.numpoles + 1] }
+    #[inline] fn linep2x(&self) -> ParamIdx { self.pvec[3 * self.numpoles + 2] }
+    #[inline] fn linep2y(&self) -> ParamIdx { self.pvec[3 * self.numpoles + 3] }
+
+    fn compute_slopes(&self, store: &ParamStore) -> (f64, f64) {
+        let mut xsum = 0.0;
+        let mut xslopesum = 0.0;
+        let mut ysum = 0.0;
+        let mut yslopesum = 0.0;
+        let mut wsum = 0.0;
+        let mut wslopesum = 0.0;
+
+        for i in 0..self.numpoles {
+            let wc = store.get(self.weightat(i)) * self.factors[i];
+            let wsc = store.get(self.weightat(i)) * self.slopefactors[i];
+            wsum += wc;
+            xsum += store.get(self.polexat(i)) * wc;
+            ysum += store.get(self.poleyat(i)) * wc;
+            wslopesum += wsc;
+            xslopesum += store.get(self.polexat(i)) * wsc;
+            yslopesum += store.get(self.poleyat(i)) * wsc;
+        }
+        let sx = wsum * xslopesum - wslopesum * xsum;
+        let sy = wsum * yslopesum - wslopesum * ysum;
+        (sx, sy)
+    }
+
+    fn line_dir(&self, store: &ParamStore) -> (f64, f64) {
+        let lx = store.get(self.linep2x()) - store.get(self.linep1x());
+        let ly = store.get(self.linep2y()) - store.get(self.linep1y());
+        let len = (lx * lx + ly * ly).sqrt();
+        (lx / len, ly / len)
+    }
+}
+
+impl Constraint for ConstraintSlopeAtBSplineKnot {
+    fn error(&self, store: &ParamStore) -> f64 {
+        let (sx, sy) = self.compute_slopes(store);
+        let (dirx, diry) = self.line_dir(store);
+        self.scale * (sx * diry - sy * dirx)
+    }
+
+    fn grad(&self, store: &ParamStore, param: ParamIdx) -> f64 {
+        let (dirx, diry) = self.line_dir(store);
+        let lx = store.get(self.linep2x()) - store.get(self.linep1x());
+        let ly = store.get(self.linep2y()) - store.get(self.linep1y());
+        let len_sq = lx * lx + ly * ly;
+        let len = len_sq.sqrt();
+
+        // Check pole params
+        for i in 0..self.numpoles {
+            if param == self.polexat(i) {
+                let mut wsum = 0.0;
+                let mut wslopesum = 0.0;
+                for j in 0..self.numpoles {
+                    wsum += store.get(self.weightat(j)) * self.factors[j];
+                    wslopesum += store.get(self.weightat(j)) * self.slopefactors[j];
+                }
+                let result = (wsum * self.slopefactors[i] - wslopesum * self.factors[i]) * diry;
+                return self.scale * result;
+            }
+            if param == self.poleyat(i) {
+                let mut wsum = 0.0;
+                let mut wslopesum = 0.0;
+                for j in 0..self.numpoles {
+                    wsum += store.get(self.weightat(j)) * self.factors[j];
+                    wslopesum += store.get(self.weightat(j)) * self.slopefactors[j];
+                }
+                let result = -(wsum * self.slopefactors[i] - wslopesum * self.factors[i]) * dirx;
+                return self.scale * result;
+            }
+            if param == self.weightat(i) {
+                let mut xsum = 0.0;
+                let mut xslopesum = 0.0;
+                let mut ysum = 0.0;
+                let mut yslopesum = 0.0;
+                for j in 0..self.numpoles {
+                    let wc = store.get(self.weightat(j)) * self.factors[j];
+                    let wsc = store.get(self.weightat(j)) * self.slopefactors[j];
+                    let pxi = store.get(self.polexat(i));
+                    let pyi = store.get(self.poleyat(i));
+                    xsum += wc * (store.get(self.polexat(j)) - pxi);
+                    xslopesum += wsc * (store.get(self.polexat(j)) - pxi);
+                    ysum += wc * (store.get(self.poleyat(j)) - pyi);
+                    yslopesum += wsc * (store.get(self.poleyat(j)) - pyi);
+                }
+                let result = (self.factors[i] * xslopesum - self.slopefactors[i] * xsum) * diry
+                    - (self.factors[i] * yslopesum - self.slopefactors[i] * ysum) * dirx;
+                return self.scale * result;
+            }
+        }
+
+        // Line params
+        let (sx, sy) = self.compute_slopes(store);
+        let len_cubed = len_sq * len;
+
+        if param == self.linep1x() {
+            let d_dirx = ly * ly / len_cubed;
+            let d_diry = -(lx * ly) / len_cubed;
+            return self.scale * (sx * (-d_diry) - sy * (-d_dirx));
+        }
+        if param == self.linep2x() {
+            let d_dirx = ly * ly / len_cubed;
+            let d_diry = -(lx * ly) / len_cubed;
+            return self.scale * (sx * d_diry - sy * d_dirx);
+        }
+        if param == self.linep1y() {
+            let d_dirx = -(lx * ly) / len_cubed;
+            let d_diry = lx * lx / len_cubed;
+            return self.scale * (sx * (-d_diry) - sy * (-d_dirx));
+        }
+        if param == self.linep2y() {
+            let d_dirx = -(lx * ly) / len_cubed;
+            let d_diry = lx * lx / len_cubed;
+            return self.scale * (sx * d_diry - sy * d_dirx);
+        }
+
+        0.0
+    }
+
+    fn rescale(&mut self, store: &ParamStore) {
+        let mut sx = 0.0;
+        let mut sy = 0.0;
+        for i in 0..self.numpoles {
+            sx += store.get(self.polexat(i)) * self.slopefactors[i];
+            sy += store.get(self.poleyat(i)) * self.slopefactors[i];
+        }
+        let len = (sx * sx + sy * sy).sqrt();
+        if len > 1e-30 {
+            self.scale = 1.0 / len;
+        }
+    }
+
+    fn params(&self) -> &[ParamIdx] { &self.pvec }
+    fn tag(&self) -> Tag { self.tag }
+    fn is_driving(&self) -> bool { self.driving }
+}
+
+// ---------------------------------------------------------------------------
+// C2CDistance: distance between two circles
+// ---------------------------------------------------------------------------
+
+pub struct ConstraintC2CDistance {
+    pvec: Vec<ParamIdx>,
+    c1: Circle,
+    c2: Circle,
+    scale: f64,
+    pub tag: Tag,
+    pub driving: bool,
+}
+
+impl ConstraintC2CDistance {
+    pub fn new(c1: Circle, c2: Circle, distance: ParamIdx, tag: Tag, driving: bool) -> Self {
+        let mut pvec = vec![distance];
+        pvec.extend(c1.params());
+        pvec.extend(c2.params());
+        Self { pvec, c1, c2, scale: 1.0, tag, driving }
+    }
+
+    #[inline] fn distance_idx(&self) -> ParamIdx { self.pvec[0] }
+
+    fn errorgrad_impl(&self, store: &ParamStore, deriv_param: Option<ParamIdx>) -> (f64, f64) {
+        let ct1 = DeriVector2::from_point(store, self.c1.center, deriv_param);
+        let ct2 = DeriVector2::from_point(store, self.c2.center, deriv_param);
+        let v = ct1.sub(&ct2);
+        let (len, dlen) = v.length();
+
+        let r1 = store.get(self.c1.rad);
+        let r2 = store.get(self.c2.rad);
+        let d = store.get(self.distance_idx());
+
+        if len >= r1 && len >= r2 {
+            // Outer case
+            let err = len - (r2 + r1 + d);
+            let drad = if deriv_param == Some(self.c2.rad)
+                || deriv_param == Some(self.c1.rad)
+                || deriv_param == Some(self.distance_idx())
+            { -1.0 } else { 0.0 };
+            (err, dlen + drad)
+        } else {
+            // Inner case
+            let (big_rad_idx, small_rad_idx) = if r1 >= r2 {
+                (self.c1.rad, self.c2.rad)
+            } else {
+                (self.c2.rad, self.c1.rad)
+            };
+            let big_r = r1.max(r2);
+            let small_r = r1.min(r2);
+            let small_span = small_r + len + d;
+            let err = big_r - small_span;
+
+            let mut drad = 0.0;
+            if deriv_param == Some(big_rad_idx) {
+                drad = 1.0;
+            } else if deriv_param == Some(small_rad_idx) {
+                drad = -1.0;
+            } else if deriv_param == Some(self.distance_idx()) {
+                drad = if d < 0.0 { 1.0 } else { -1.0 };
+            }
+
+            let grad = if len > 1e-13 { -dlen + drad } else { drad };
+            (err, grad)
+        }
+    }
+}
+
+impl Constraint for ConstraintC2CDistance {
+    fn error(&self, store: &ParamStore) -> f64 {
+        let (err, _) = self.errorgrad_impl(store, None);
+        self.scale * err
+    }
+
+    fn grad(&self, store: &ParamStore, param: ParamIdx) -> f64 {
+        let (_, grad) = self.errorgrad_impl(store, Some(param));
+        self.scale * grad
+    }
+
+    fn params(&self) -> &[ParamIdx] { &self.pvec }
+    fn tag(&self) -> Tag { self.tag }
+    fn is_driving(&self) -> bool { self.driving }
+
+    fn evaluate(&self, store: &mut ParamStore) {
+        let dx = store.get(self.c1.center.x) - store.get(self.c2.center.x);
+        let dy = store.get(self.c1.center.y) - store.get(self.c2.center.y);
+        let cdist = (dx * dx + dy * dy).sqrt();
+        let r1 = store.get(self.c1.rad);
+        let r2 = store.get(self.c2.rad);
+        let (small_r, big_r) = if r1 < r2 { (r1, r2) } else { (r2, r1) };
+        let d = if cdist > big_r && cdist > small_r {
+            cdist - big_r - small_r
+        } else {
+            big_r - small_r - cdist
+        };
+        store.set(self.distance_idx(), d);
+    }
+}
+
+// ---------------------------------------------------------------------------
+// C2LDistance: distance between a circle and a line
+// ---------------------------------------------------------------------------
+
+pub struct ConstraintC2LDistance {
+    pvec: Vec<ParamIdx>,
+    circle: Circle,
+    line: Line,
+    scale: f64,
+    pub tag: Tag,
+    pub driving: bool,
+}
+
+impl ConstraintC2LDistance {
+    pub fn new(circle: Circle, line: Line, distance: ParamIdx, tag: Tag, driving: bool) -> Self {
+        let mut pvec = vec![distance];
+        pvec.extend(circle.params());
+        pvec.extend(line.params());
+        Self { pvec, circle, line, scale: 1.0, tag, driving }
+    }
+
+    #[inline] fn distance_idx(&self) -> ParamIdx { self.pvec[0] }
+
+    /// Center-to-line perpendicular distance and its derivative.
+    fn center_to_line_dist(&self, store: &ParamStore, deriv_param: Option<ParamIdx>) -> (f64, f64) {
+        let ct = DeriVector2::from_point(store, self.circle.center, deriv_param);
+        let p1 = DeriVector2::from_point(store, self.line.p1, deriv_param);
+        let p2 = DeriVector2::from_point(store, self.line.p2, deriv_param);
+        let v_line = p2.sub(&p1);
+        let v_p1ct = ct.sub(&p1);
+
+        let (area, darea_raw) = v_line.cross_z(&v_p1ct);
+        let (length, dlength) = v_line.length();
+
+        let h = area.abs() / length;
+        let darea = if area < 0.0 { -darea_raw } else { darea_raw };
+        let dh = (darea - h * dlength) / length;
+        (h, dh)
+    }
+
+    fn errorgrad_impl(&self, store: &ParamStore, deriv_param: Option<ParamIdx>) -> (f64, f64) {
+        let (h, dh) = self.center_to_line_dist(store, deriv_param);
+        let r = store.get(self.circle.rad);
+        let d = store.get(self.distance_idx());
+
+        if h < r {
+            let err = r - d.abs() - h;
+            let grad = if deriv_param == Some(self.distance_idx())
+                || deriv_param == Some(self.circle.rad)
+            { -1.0 } else { -dh };
+            (err, grad)
+        } else {
+            let err = r + d.abs() - h;
+            let grad = if deriv_param == Some(self.distance_idx())
+                || deriv_param == Some(self.circle.rad)
+            { 1.0 } else { -dh };
+            (err, grad)
+        }
+    }
+}
+
+impl Constraint for ConstraintC2LDistance {
+    fn error(&self, store: &ParamStore) -> f64 {
+        let (err, _) = self.errorgrad_impl(store, None);
+        self.scale * err
+    }
+
+    fn grad(&self, store: &ParamStore, param: ParamIdx) -> f64 {
+        let (_, grad) = self.errorgrad_impl(store, Some(param));
+        self.scale * grad
+    }
+
+    fn params(&self) -> &[ParamIdx] { &self.pvec }
+    fn tag(&self) -> Tag { self.tag }
+    fn is_driving(&self) -> bool { self.driving }
+
+    fn evaluate(&self, store: &mut ParamStore) {
+        let (h, _) = self.center_to_line_dist(store, None);
+        let r = store.get(self.circle.rad);
+        let d = if h < r { r - h } else { h - r };
+        store.set(self.distance_idx(), d);
+    }
+}
+
+// ---------------------------------------------------------------------------
+// P2CDistance: distance from a point to a circle
+// ---------------------------------------------------------------------------
+
+pub struct ConstraintP2CDistance {
+    pvec: Vec<ParamIdx>,
+    circle: Circle,
+    pt: Point,
+    scale: f64,
+    pub tag: Tag,
+    pub driving: bool,
+}
+
+impl ConstraintP2CDistance {
+    pub fn new(pt: Point, circle: Circle, distance: ParamIdx, tag: Tag, driving: bool) -> Self {
+        let mut pvec = vec![distance];
+        pvec.extend(circle.params());
+        pvec.push(pt.x);
+        pvec.push(pt.y);
+        Self { pvec, circle, pt, scale: 1.0, tag, driving }
+    }
+
+    #[inline] fn distance_idx(&self) -> ParamIdx { self.pvec[0] }
+
+    /// Distance from center to point and its derivative.
+    fn center_to_point_dist(&self, store: &ParamStore, deriv_param: Option<ParamIdx>) -> (f64, f64) {
+        let ct = DeriVector2::from_point(store, self.circle.center, deriv_param);
+        let p = DeriVector2::from_point(store, self.pt, deriv_param);
+        let v = ct.sub(&p);
+        v.length()
+    }
+
+    fn errorgrad_impl(&self, store: &ParamStore, deriv_param: Option<ParamIdx>) -> (f64, f64) {
+        let (len, dlen) = self.center_to_point_dist(store, deriv_param);
+        let r = store.get(self.circle.rad);
+        let d = store.get(self.distance_idx());
+
+        if len < r {
+            // Point inside circle
+            let err = r - d - len;
+            let grad = if deriv_param == Some(self.distance_idx()) {
+                -1.0
+            } else if deriv_param == Some(self.circle.rad) {
+                1.0
+            } else {
+                -dlen
+            };
+            (err, grad)
+        } else {
+            let err = r + d - len;
+            let grad = if deriv_param == Some(self.distance_idx()) {
+                1.0
+            } else if deriv_param == Some(self.circle.rad) {
+                1.0
+            } else {
+                -dlen
+            };
+            (err, grad)
+        }
+    }
+}
+
+impl Constraint for ConstraintP2CDistance {
+    fn error(&self, store: &ParamStore) -> f64 {
+        let (err, _) = self.errorgrad_impl(store, None);
+        self.scale * err
+    }
+
+    fn grad(&self, store: &ParamStore, param: ParamIdx) -> f64 {
+        let (_, grad) = self.errorgrad_impl(store, Some(param));
+        self.scale * grad
+    }
+
+    fn params(&self) -> &[ParamIdx] { &self.pvec }
+    fn tag(&self) -> Tag { self.tag }
+    fn is_driving(&self) -> bool { self.driving }
+
+    fn evaluate(&self, store: &mut ParamStore) {
+        let (h, _) = self.center_to_point_dist(store, None);
+        let r = store.get(self.circle.rad);
+        let d = if h < r { r - h } else { h - r };
+        store.set(self.distance_idx(), d);
+    }
+}
+
 // ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
@@ -2281,5 +3237,418 @@ mod tests {
             store.set(param, orig);
             assert_abs_diff_eq!(g, (e1 - e0) / eps, epsilon = 1e-4);
         }
+    }
+
+    // ===================================================================
+    // Phase 4 tests
+    // ===================================================================
+
+    #[test]
+    fn angle_via_point_satisfied() {
+        // Two circles: tangent at (3,0). The angle between normals should be π.
+        let mut store = ParamStore::new();
+        let c1 = cadora_geo::Circle {
+            center: Point::new(store.push(0.0), store.push(0.0)),
+            rad: store.push(3.0),
+        };
+        let c2 = cadora_geo::Circle {
+            center: Point::new(store.push(6.0), store.push(0.0)),
+            rad: store.push(3.0),
+        };
+        let poa = Point::new(store.push(3.0), store.push(0.0));
+        let ang = store.push(std::f64::consts::PI);
+        let c = ConstraintAngleViaPoint::new(Box::new(c1), Box::new(c2), ang, poa, 0, true);
+        assert_abs_diff_eq!(c.error(&store), 0.0, epsilon = 1e-12);
+    }
+
+    #[test]
+    fn angle_via_point_gradient_fd() {
+        let mut store = ParamStore::new();
+        let c1 = cadora_geo::Circle {
+            center: Point::new(store.push(0.0), store.push(0.0)),
+            rad: store.push(3.0),
+        };
+        let c2 = cadora_geo::Circle {
+            center: Point::new(store.push(5.0), store.push(1.0)),
+            rad: store.push(2.0),
+        };
+        let poa = Point::new(store.push(2.5), store.push(0.5));
+        let ang = store.push(1.0);
+        let c = ConstraintAngleViaPoint::new(Box::new(c1), Box::new(c2), ang, poa, 0, true);
+        for &param in c.params() {
+            let g = c.grad(&store, param);
+            let e0 = c.error(&store);
+            let orig = store.get(param);
+            let eps = 1e-8;
+            store.set(param, orig + eps);
+            let e1 = c.error(&store);
+            store.set(param, orig);
+            assert_abs_diff_eq!(g, (e1 - e0) / eps, epsilon = 1e-5);
+        }
+    }
+
+    #[test]
+    fn angle_via_two_points_gradient_fd() {
+        let mut store = ParamStore::new();
+        let c1 = cadora_geo::Circle {
+            center: Point::new(store.push(0.0), store.push(0.0)),
+            rad: store.push(3.0),
+        };
+        let c2 = cadora_geo::Circle {
+            center: Point::new(store.push(5.0), store.push(1.0)),
+            rad: store.push(2.0),
+        };
+        let poa1 = Point::new(store.push(2.5), store.push(0.5));
+        let poa2 = Point::new(store.push(4.0), store.push(2.0));
+        let ang = store.push(0.7);
+        let c = ConstraintAngleViaTwoPoints::new(Box::new(c1), Box::new(c2), ang, poa1, poa2, 0, true);
+        for &param in c.params() {
+            let g = c.grad(&store, param);
+            let e0 = c.error(&store);
+            let orig = store.get(param);
+            let eps = 1e-8;
+            store.set(param, orig + eps);
+            let e1 = c.error(&store);
+            store.set(param, orig);
+            assert_abs_diff_eq!(g, (e1 - e0) / eps, epsilon = 1e-5);
+        }
+    }
+
+    #[test]
+    fn angle_via_two_points_evaluate() {
+        let mut store = ParamStore::new();
+        let c1 = cadora_geo::Circle {
+            center: Point::new(store.push(0.0), store.push(0.0)),
+            rad: store.push(3.0),
+        };
+        let c2 = cadora_geo::Circle {
+            center: Point::new(store.push(5.0), store.push(0.0)),
+            rad: store.push(2.0),
+        };
+        let poa1 = Point::new(store.push(1.0), store.push(1.0));
+        let poa2 = Point::new(store.push(4.0), store.push(1.0));
+        let ang = store.push(0.0);
+        let c = ConstraintAngleViaTwoPoints::new(Box::new(c1), Box::new(c2), ang, poa1, poa2, 0, true);
+        c.evaluate(&mut store);
+        assert_abs_diff_eq!(c.error(&store), 0.0, epsilon = 1e-12);
+    }
+
+    #[test]
+    fn snell_satisfied() {
+        // Two rays and a flat boundary all through a point.
+        // n1*sin(θ1) = n2*sin(θ2) for straight lines.
+        let mut store = ParamStore::new();
+        // Boundary: horizontal line through origin
+        let boundary = cadora_geo::Line {
+            p1: Point::new(store.push(-1.0), store.push(0.0)),
+            p2: Point::new(store.push(1.0), store.push(0.0)),
+        };
+        // ray1: 45° from normal → sin(45°) = √2/2
+        let ray1 = cadora_geo::Line {
+            p1: Point::new(store.push(-1.0), store.push(-1.0)),
+            p2: Point::new(store.push(0.0), store.push(0.0)),
+        };
+        // ray2: 30° from normal → sin(30°) = 0.5
+        let angle2 = std::f64::consts::FRAC_PI_6;
+        let ray2 = cadora_geo::Line {
+            p1: Point::new(store.push(0.0), store.push(0.0)),
+            p2: Point::new(store.push(angle2.sin()), store.push(angle2.cos())),
+        };
+        let poa = Point::new(store.push(0.0), store.push(0.0));
+        // n1*sin(45) = n2*sin(30)  →  n1*0.7071 = n2*0.5  →  n1/n2 = 0.5/0.7071
+        let sin45 = std::f64::consts::FRAC_PI_4.sin();
+        let sin30 = 0.5;
+        let n1 = store.push(sin30);
+        let n2 = store.push(sin45);
+        let c = ConstraintSnell::new(
+            Box::new(ray1), Box::new(ray2), Box::new(boundary),
+            n1, n2, poa, false, false, 0, true,
+        );
+        assert_abs_diff_eq!(c.error(&store), 0.0, epsilon = 1e-6);
+    }
+
+    #[test]
+    fn snell_gradient_fd() {
+        let mut store = ParamStore::new();
+        let boundary = cadora_geo::Line {
+            p1: Point::new(store.push(-1.0), store.push(0.0)),
+            p2: Point::new(store.push(1.0), store.push(0.0)),
+        };
+        let ray1 = cadora_geo::Line {
+            p1: Point::new(store.push(-1.0), store.push(-1.0)),
+            p2: Point::new(store.push(0.0), store.push(0.0)),
+        };
+        let ray2 = cadora_geo::Line {
+            p1: Point::new(store.push(0.0), store.push(0.0)),
+            p2: Point::new(store.push(1.0), store.push(2.0)),
+        };
+        let poa = Point::new(store.push(0.0), store.push(0.0));
+        let n1 = store.push(1.5);
+        let n2 = store.push(1.0);
+        let c = ConstraintSnell::new(
+            Box::new(ray1), Box::new(ray2), Box::new(boundary),
+            n1, n2, poa, false, false, 0, true,
+        );
+        for &param in c.params() {
+            let g = c.grad(&store, param);
+            let e0 = c.error(&store);
+            let orig = store.get(param);
+            let eps = 1e-8;
+            store.set(param, orig + eps);
+            let e1 = c.error(&store);
+            store.set(param, orig);
+            assert_abs_diff_eq!(g, (e1 - e0) / eps, epsilon = 1e-5);
+        }
+    }
+
+    #[test]
+    fn weighted_linear_combination_satisfied() {
+        // 3 poles at x=1,2,3 with weights 1,1,1 and factors [0.25, 0.5, 0.25]
+        // q = (1*1*0.25 + 2*1*0.5 + 3*1*0.25) / (1*0.25 + 1*0.5 + 1*0.25)
+        // q = (0.25 + 1.0 + 0.75) / 1.0 = 2.0
+        let mut store = ParamStore::new();
+        let q = store.push(2.0);
+        let p0 = store.push(1.0);
+        let p1 = store.push(2.0);
+        let p2 = store.push(3.0);
+        let w0 = store.push(1.0);
+        let w1 = store.push(1.0);
+        let w2 = store.push(1.0);
+        let c = ConstraintWeightedLinearCombination::new(
+            3,
+            vec![q, p0, p1, p2, w0, w1, w2],
+            vec![0.25, 0.5, 0.25],
+            0, true,
+        );
+        assert_abs_diff_eq!(c.error(&store), 0.0, epsilon = 1e-12);
+    }
+
+    #[test]
+    fn weighted_linear_combination_gradient_fd() {
+        let mut store = ParamStore::new();
+        let q = store.push(2.5);
+        let p0 = store.push(1.0);
+        let p1 = store.push(3.0);
+        let p2 = store.push(5.0);
+        let w0 = store.push(0.3);
+        let w1 = store.push(0.5);
+        let w2 = store.push(0.2);
+        let c = ConstraintWeightedLinearCombination::new(
+            3,
+            vec![q, p0, p1, p2, w0, w1, w2],
+            vec![0.25, 0.5, 0.25],
+            0, true,
+        );
+        for &param in c.params() {
+            let g = c.grad(&store, param);
+            let e0 = c.error(&store);
+            let orig = store.get(param);
+            let eps = 1e-8;
+            store.set(param, orig + eps);
+            let e1 = c.error(&store);
+            store.set(param, orig);
+            assert_abs_diff_eq!(g, (e1 - e0) / eps, epsilon = 1e-5);
+        }
+    }
+
+    #[test]
+    fn center_of_gravity_satisfied() {
+        let mut store = ParamStore::new();
+        // center = 0.3*1.0 + 0.7*3.0 = 0.3 + 2.1 = 2.4
+        let center = store.push(2.4);
+        let p0 = store.push(1.0);
+        let p1 = store.push(3.0);
+        let c = ConstraintCenterOfGravity::new(vec![center, p0, p1], vec![0.3, 0.7], 0, true);
+        assert_abs_diff_eq!(c.error(&store), 0.0, epsilon = 1e-12);
+    }
+
+    #[test]
+    fn center_of_gravity_gradient_fd() {
+        let mut store = ParamStore::new();
+        let center = store.push(3.0);
+        let p0 = store.push(1.0);
+        let p1 = store.push(4.0);
+        let p2 = store.push(2.0);
+        let c = ConstraintCenterOfGravity::new(
+            vec![center, p0, p1, p2], vec![0.2, 0.5, 0.3], 0, true,
+        );
+        for &param in c.params() {
+            let g = c.grad(&store, param);
+            let e0 = c.error(&store);
+            let orig = store.get(param);
+            let eps = 1e-8;
+            store.set(param, orig + eps);
+            let e1 = c.error(&store);
+            store.set(param, orig);
+            assert_abs_diff_eq!(g, (e1 - e0) / eps, epsilon = 1e-5);
+        }
+    }
+
+    #[test]
+    fn slope_at_bspline_knot_gradient_fd() {
+        // Simple test: 2 poles, factors and slopefactors are manual
+        let mut store = ParamStore::new();
+        let numpoles = 2;
+        // pole x coords
+        let px0 = store.push(0.0);
+        let px1 = store.push(3.0);
+        // pole y coords
+        let py0 = store.push(0.0);
+        let py1 = store.push(4.0);
+        // weights
+        let w0 = store.push(1.0);
+        let w1 = store.push(1.0);
+        // line p1 and p2
+        let lp1x = store.push(0.0);
+        let lp1y = store.push(0.0);
+        let lp2x = store.push(3.0);
+        let lp2y = store.push(4.0);
+
+        let pvec = vec![px0, px1, py0, py1, w0, w1, lp1x, lp1y, lp2x, lp2y];
+        let factors = vec![0.5, 0.5];
+        let slopefactors = vec![-1.0, 1.0];
+        let c = ConstraintSlopeAtBSplineKnot::new(pvec, factors, slopefactors, numpoles, 0, true);
+
+        for &param in c.params() {
+            let g = c.grad(&store, param);
+            let e0 = c.error(&store);
+            let orig = store.get(param);
+            let eps = 1e-8;
+            store.set(param, orig + eps);
+            let e1 = c.error(&store);
+            store.set(param, orig);
+            assert_abs_diff_eq!(g, (e1 - e0) / eps, epsilon = 1e-4);
+        }
+    }
+
+    #[test]
+    fn c2c_distance_outer_satisfied() {
+        let mut store = ParamStore::new();
+        // c1 at origin r=2, c2 at (5,0) r=1, distance = 5-2-1 = 2
+        let c1 = cadora_geo::Circle {
+            center: Point::new(store.push(0.0), store.push(0.0)),
+            rad: store.push(2.0),
+        };
+        let c2 = cadora_geo::Circle {
+            center: Point::new(store.push(5.0), store.push(0.0)),
+            rad: store.push(1.0),
+        };
+        let d = store.push(2.0);
+        let c = ConstraintC2CDistance::new(c1, c2, d, 0, true);
+        assert_abs_diff_eq!(c.error(&store), 0.0, epsilon = 1e-12);
+    }
+
+    #[test]
+    fn c2c_distance_gradient_fd() {
+        let mut store = ParamStore::new();
+        let c1 = cadora_geo::Circle {
+            center: Point::new(store.push(0.0), store.push(0.0)),
+            rad: store.push(2.0),
+        };
+        let c2 = cadora_geo::Circle {
+            center: Point::new(store.push(5.0), store.push(1.0)),
+            rad: store.push(1.5),
+        };
+        let d = store.push(1.0);
+        let c = ConstraintC2CDistance::new(c1, c2, d, 0, true);
+        for &param in c.params() {
+            let g = c.grad(&store, param);
+            let e0 = c.error(&store);
+            let orig = store.get(param);
+            let eps = 1e-8;
+            store.set(param, orig + eps);
+            let e1 = c.error(&store);
+            store.set(param, orig);
+            assert_abs_diff_eq!(g, (e1 - e0) / eps, epsilon = 1e-5);
+        }
+    }
+
+    #[test]
+    fn c2l_distance_satisfied() {
+        let mut store = ParamStore::new();
+        // Circle at (0, 3) r=1, line along x-axis.
+        // h = 3, d = h - r = 2
+        let circle = cadora_geo::Circle {
+            center: Point::new(store.push(0.0), store.push(3.0)),
+            rad: store.push(1.0),
+        };
+        let line = cadora_geo::Line {
+            p1: Point::new(store.push(-5.0), store.push(0.0)),
+            p2: Point::new(store.push(5.0), store.push(0.0)),
+        };
+        let d = store.push(2.0);
+        let c = ConstraintC2LDistance::new(circle, line, d, 0, true);
+        assert_abs_diff_eq!(c.error(&store), 0.0, epsilon = 1e-12);
+    }
+
+    #[test]
+    fn c2l_distance_gradient_fd() {
+        let mut store = ParamStore::new();
+        let circle = cadora_geo::Circle {
+            center: Point::new(store.push(1.0), store.push(4.0)),
+            rad: store.push(1.5),
+        };
+        let line = cadora_geo::Line {
+            p1: Point::new(store.push(-2.0), store.push(1.0)),
+            p2: Point::new(store.push(5.0), store.push(1.0)),
+        };
+        let d = store.push(0.5);
+        let c = ConstraintC2LDistance::new(circle, line, d, 0, true);
+        for &param in c.params() {
+            let g = c.grad(&store, param);
+            let e0 = c.error(&store);
+            let orig = store.get(param);
+            let eps = 1e-8;
+            store.set(param, orig + eps);
+            let e1 = c.error(&store);
+            store.set(param, orig);
+            assert_abs_diff_eq!(g, (e1 - e0) / eps, epsilon = 1e-4);
+        }
+    }
+
+    #[test]
+    fn p2c_distance_satisfied() {
+        let mut store = ParamStore::new();
+        // Circle at origin r=3, point at (5,0), distance = 5-3 = 2
+        let circle = cadora_geo::Circle {
+            center: Point::new(store.push(0.0), store.push(0.0)),
+            rad: store.push(3.0),
+        };
+        let pt = Point::new(store.push(5.0), store.push(0.0));
+        let d = store.push(2.0);
+        let c = ConstraintP2CDistance::new(pt, circle, d, 0, true);
+        assert_abs_diff_eq!(c.error(&store), 0.0, epsilon = 1e-12);
+    }
+
+    #[test]
+    fn p2c_distance_gradient_fd() {
+        let mut store = ParamStore::new();
+        let circle = cadora_geo::Circle {
+            center: Point::new(store.push(1.0), store.push(2.0)),
+            rad: store.push(3.0),
+        };
+        let pt = Point::new(store.push(5.0), store.push(5.0));
+        let d = store.push(1.0);
+        let c = ConstraintP2CDistance::new(pt, circle, d, 0, true);
+        for &param in c.params() {
+            let g = c.grad(&store, param);
+            let e0 = c.error(&store);
+            let orig = store.get(param);
+            let eps = 1e-8;
+            store.set(param, orig + eps);
+            let e1 = c.error(&store);
+            store.set(param, orig);
+            assert_abs_diff_eq!(g, (e1 - e0) / eps, epsilon = 1e-5);
+        }
+    }
+
+    #[test]
+    fn vector_angle_helper_sanity() {
+        // Angle between (1,0) and (0,1) should be π/2
+        let a = vector_angle_helper(1.0, 0.0, 0.0, 1.0);
+        assert_abs_diff_eq!(a, std::f64::consts::FRAC_PI_2, epsilon = 1e-12);
+        // Angle between (1,0) and (1,0) should be 0
+        let b = vector_angle_helper(1.0, 0.0, 1.0, 0.0);
+        assert_abs_diff_eq!(b, 0.0, epsilon = 1e-12);
     }
 }

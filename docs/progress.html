@@ -175,24 +175,24 @@
 <!-- ==================== PHASE 4 ==================== -->
 <div class="phase">
   <div class="phase-header" onclick="this.parentElement.classList.toggle('open')">
-    <h3><span class="arrow">&#9654;</span> Phase 4 — Constraints: Advanced <span class="phase-badge badge-todo">Not Started</span></h3>
-    <span class="phase-pct">0 / 12</span>
+    <h3><span class="arrow">&#9654;</span> Phase 4 — Constraints: Advanced <span class="phase-badge badge-progress">In Progress</span></h3>
+    <span class="phase-pct">10 / 12</span>
   </div>
   <div class="phase-body">
     <table>
       <tr><th></th><th>Task</th><th>Crate</th><th>Source Reference</th></tr>
-      <tr><td><span class="pending">&#9675;</span></td><td>AngleViaPoint</td><td><span class="crate-tag">cadora-constraints</span></td><td class="source-ref">Constraints.cpp:2060-2200</td></tr>
-      <tr><td><span class="pending">&#9675;</span></td><td>AngleViaTwoPoints</td><td><span class="crate-tag">cadora-constraints</span></td><td class="source-ref">Constraints.cpp:2200-2350</td></tr>
-      <tr><td><span class="pending">&#9675;</span></td><td>AngleViaPointAndParam</td><td><span class="crate-tag">cadora-constraints</span></td><td class="source-ref">Constraints.cpp:2350-2500</td></tr>
-      <tr><td><span class="pending">&#9675;</span></td><td>AngleViaPointAndTwoParams</td><td><span class="crate-tag">cadora-constraints</span></td><td class="source-ref">Constraints.cpp:2500-2650</td></tr>
-      <tr><td><span class="pending">&#9675;</span></td><td>Snell (optical refraction)</td><td><span class="crate-tag">cadora-constraints</span></td><td class="source-ref">Constraints.cpp:2700-2800</td></tr>
-      <tr><td><span class="pending">&#9675;</span></td><td>PointOnBSpline (x/y split, NURBS eval)</td><td><span class="crate-tag">cadora-constraints</span></td><td class="source-ref">Constraints.cpp:400-630</td></tr>
-      <tr><td><span class="pending">&#9675;</span></td><td>WeightedLinearCombination</td><td><span class="crate-tag">cadora-constraints</span></td><td class="source-ref">Constraints.cpp:100-200</td></tr>
-      <tr><td><span class="pending">&#9675;</span></td><td>CenterOfGravity</td><td><span class="crate-tag">cadora-constraints</span></td><td class="source-ref">Constraints.cpp:200-280</td></tr>
-      <tr><td><span class="pending">&#9675;</span></td><td>SlopeAtBSplineKnot</td><td><span class="crate-tag">cadora-constraints</span></td><td class="source-ref">Constraints.cpp:280-400</td></tr>
-      <tr><td><span class="pending">&#9675;</span></td><td>C2CDistance, C2LDistance, P2CDistance</td><td><span class="crate-tag">cadora-constraints</span></td><td class="source-ref">Constraints.cpp:2880-3180</td></tr>
-      <tr><td><span class="pending">&#9675;</span></td><td>Scale/rescale mechanism</td><td><span class="crate-tag">cadora-constraints</span></td><td class="source-ref">Constraints.cpp rescale()</td></tr>
-      <tr><td><span class="pending">&#9675;</span></td><td>Driven constraint evaluate() for all types</td><td><span class="crate-tag">cadora-constraints</span></td><td class="source-ref">Constraints.cpp evaluate()</td></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>AngleViaPoint (+ vector_angle_helper, datan2_d)</td><td><span class="crate-tag">cadora-constraints</span></td><td class="source-ref">Constraints.cpp:2060-2200</td></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>AngleViaTwoPoints (+ evaluate)</td><td><span class="crate-tag">cadora-constraints</span></td><td class="source-ref">Constraints.cpp:2200-2350</td></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>AngleViaPointAndParam (+ normal_at_param on Curve trait)</td><td><span class="crate-tag">cadora-constraints</span></td><td class="source-ref">Constraints.cpp:2350-2500</td></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>AngleViaPointAndTwoParams (+ evaluate)</td><td><span class="crate-tag">cadora-constraints</span></td><td class="source-ref">Constraints.cpp:2500-2650</td></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>Snell (optical refraction, flipn1/flipn2)</td><td><span class="crate-tag">cadora-constraints</span></td><td class="source-ref">Constraints.cpp:2700-2800</td></tr>
+      <tr><td><span class="pending">&#9675;</span></td><td>PointOnBSpline (deferred — needs BSpline::splineValue)</td><td><span class="crate-tag">cadora-constraints</span></td><td class="source-ref">Constraints.cpp:400-630</td></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>WeightedLinearCombination</td><td><span class="crate-tag">cadora-constraints</span></td><td class="source-ref">Constraints.cpp:100-200</td></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>CenterOfGravity</td><td><span class="crate-tag">cadora-constraints</span></td><td class="source-ref">Constraints.cpp:200-280</td></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>SlopeAtBSplineKnot (complex NURBS derivative gradient)</td><td><span class="crate-tag">cadora-constraints</span></td><td class="source-ref">Constraints.cpp:280-400</td></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>C2CDistance, C2LDistance, P2CDistance (inner/outer cases)</td><td><span class="crate-tag">cadora-constraints</span></td><td class="source-ref">Constraints.cpp:2880-3180</td></tr>
+      <tr><td><span class="pending">&#9675;</span></td><td>Scale/rescale for remaining types</td><td><span class="crate-tag">cadora-constraints</span></td><td class="source-ref">Constraints.cpp rescale()</td></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>Driven constraint evaluate() for applicable types</td><td><span class="crate-tag">cadora-constraints</span></td><td class="source-ref">Constraints.cpp evaluate()</td></tr>
     </table>
   </div>
 </div>
