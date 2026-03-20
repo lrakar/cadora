@@ -129,6 +129,11 @@ pub fn tessellate(shape: &Shape, params: &TessellationParams) -> Mesh {
     }
 }
 
+/// Get parameter range for a surface (public version for cross-module use).
+pub fn surface_parameter_range_pub(surface: &Surface) -> ((f64, f64), (f64, f64)) {
+    surface_parameter_range(surface)
+}
+
 /// Get parameter range for a surface.
 /// For RevolutedCurve surfaces, the u parameter is the curve parameter
 /// and v is the rotation angle. We use knot vectors where available.
