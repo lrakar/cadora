@@ -754,6 +754,31 @@
   </div>
 </div>
 
+<!-- ==================== D.7 ==================== -->
+<div class="phase open">
+  <div class="phase-header" onclick="this.parentElement.classList.toggle('open')">
+    <h3><span class="arrow">&#9654;</span> D.7 &mdash; Advanced Shape Operations (Pad/Pocket/Revolution/Groove/Mirror/Pattern) <span class="phase-badge badge-done">Done</span></h3>
+    <span class="phase-pct">12 / 12</span>
+  </div>
+  <div class="phase-body">
+    <table>
+      <tr><th></th><th>Task</th><th>Crate</th><th>Source Reference</th></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>ExtrudeMode enum (Length, Symmetric, TwoSides, ThroughAll) + extrude_symmetric, extrude_two_sides</td><td><span class="crate-tag">cadora-brep</span></td><td class="source-ref">operations.rs &middot; BRepPrimAPI_MakePrism modes</td></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>pad() &mdash; additive extrusion (extrude + boolean fuse with base)</td><td><span class="crate-tag">cadora-brep</span></td><td class="source-ref">operations.rs &middot; PartDesign::Pad</td></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>pocket() &mdash; subtractive extrusion (extrude + boolean cut from base)</td><td><span class="crate-tag">cadora-brep</span></td><td class="source-ref">operations.rs &middot; PartDesign::Pocket</td></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>extrude_with_taper() &mdash; draft/taper via wire homotopy (experimental)</td><td><span class="crate-tag">cadora-brep</span></td><td class="source-ref">operations.rs &middot; ExtrusionHelper::makeDraft</td></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>RevolveMode enum (Angle, Symmetric, TwoAngles, ThroughAll) + revolve_face, revolve_symmetric, revolve_two_angles</td><td><span class="crate-tag">cadora-brep</span></td><td class="source-ref">operations.rs &middot; BRepPrimAPI_MakeRevol modes</td></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>revolution() &mdash; additive revolution (revolve + boolean fuse with base)</td><td><span class="crate-tag">cadora-brep</span></td><td class="source-ref">operations.rs &middot; PartDesign::Revolution</td></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>groove() &mdash; subtractive revolution (revolve + boolean cut from base)</td><td><span class="crate-tag">cadora-brep</span></td><td class="source-ref">operations.rs &middot; PartDesign::Groove</td></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>mirror() &mdash; shape reflection via I-2nn&sup1; matrix about arbitrary plane</td><td><span class="crate-tag">cadora-brep</span></td><td class="source-ref">operations.rs &middot; PartDesign::Mirrored</td></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>linear_pattern() &mdash; replicate + fuse along direction with spacing</td><td><span class="crate-tag">cadora-brep</span></td><td class="source-ref">operations.rs &middot; PartDesign::LinearPattern</td></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>polar_pattern() &mdash; replicate + fuse around axis with angle distribution</td><td><span class="crate-tag">cadora-brep</span></td><td class="source-ref">operations.rs &middot; PartDesign::PolarPattern</td></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>Boolean panic safety &mdash; catch_unwind wrapper for truck-shapeops kernel panics</td><td><span class="crate-tag">cadora-brep</span></td><td class="source-ref">operations.rs &middot; BOPAlgo error handling</td></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>Tests: 24 tests covering all modes, pad/pocket, revolution/groove, mirror (3 planes), linear/polar pattern, taper</td><td><span class="crate-tag">cadora-brep</span></td><td class="source-ref">&mdash;</td></tr>
+    </table>
+  </div>
+</div>
+
 <!-- ==================== E ==================== -->
 <div class="phase">
   <div class="phase-header" onclick="this.parentElement.classList.toggle('open')">
