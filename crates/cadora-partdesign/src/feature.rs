@@ -659,9 +659,218 @@ impl Feature for PolarPatternFeature {
     }
 }
 
+/// Hole type specification.
+#[derive(Debug, Clone)]
+pub enum HoleType {
+    /// Simple cylindrical hole.
+    Simple {
+        /// Hole diameter.
+        diameter: f64,
+        /// Hole depth (None = through all).
+        depth: Option<f64>,
+    },
+    /// Countersink hole (conical top + cylindrical bottom).
+    Countersink {
+        diameter: f64,
+        depth: Option<f64>,
+        /// Countersink diameter at the surface.
+        countersink_diameter: f64,
+        /// Countersink angle (total cone angle, typically 90° or 82°).
+        countersink_angle: f64,
+    },
+    /// Counterbore hole (cylindrical recess + smaller through hole).
+    Counterbore {
+        diameter: f64,
+        depth: Option<f64>,
+        /// Counterbore diameter.
+        counterbore_diameter: f64,
+        /// Counterbore depth.
+        counterbore_depth: f64,
+    },
+}
+
+/// A hole feature — revolves a 2D hole profile and cuts from base.
+#[derive(Debug, Clone)]
+pub struct HoleFeature {
+    pub name: String,
+    /// Center position of the hole on the face surface.
+    pub position: Point3,
+    /// Hole axis direction (typically face normal, pointing into material).
+    pub direction: Vector3,
+    /// Hole specification.
+    pub hole_type: HoleType,
+    suppressed: bool,
+}
+
+impl HoleFeature {
+    pub fn new(name: impl Into<String>, position: Point3, direction: Vector3, hole_type: HoleType) -> Self {
+        Self {
+            name: name.into(),
+            position,
+            direction,
+            hole_type,
+            suppressed: false,
+        }
+    }
+
+    /// Build the 2D profile wire for the hole cross-section,
+    /// then revolve it to create the tool solid.
+    fn build_tool(&self) -> Shape {
+        let dir = self.direction.normalize();
+        let large_depth = 1000.0;
+
+        match &self.hole_type {
+            HoleType::Simple { diameter, depth } => {
+                let r = diameter / 2.0;
+                let d = depth.unwrap_or(large_depth);
+                // Profile: rectangle from (r, 0) to (0, -d) revolved around axis
+                let p0 = self.position;
+                let perp = perpendicular_to(dir);
+                let pt0 = point_offset(p0, perp, r);
+                let pt1 = point_offset(pt0, dir, -d);
+                let pt2 = point_offset(p0, dir, -d);
+                let pt3 = p0;
+
+                let v0 = builder::vertex(pt0);
+                let v1 = builder::vertex(pt1);
+                let v2 = builder::vertex(pt2);
+                let v3 = builder::vertex(pt3);
+                let wire = Wire::from_iter(vec![
+                    &builder::line(&v0, &v1),
+                    &builder::line(&v1, &v2),
+                    &builder::line(&v2, &v3),
+                    &builder::line(&v3, &v0),
+                ]);
+                revolve(&wire, self.position, self.direction, std::f64::consts::TAU)
+            }
+            HoleType::Countersink { diameter, depth, countersink_diameter, countersink_angle } => {
+                let r = diameter / 2.0;
+                let r_cs = countersink_diameter / 2.0;
+                let d = depth.unwrap_or(large_depth);
+                // Countersink depth from geometry
+                let cs_depth = (r_cs - r) / (countersink_angle / 2.0).tan();
+
+                // Profile (L-to-R, bottom-to-top):
+                // (0, -d) -> (r, -d) -> (r, -cs_depth) -> (r_cs, 0) -> (0, 0)
+                let perp = perpendicular_to(dir);
+                let p0 = self.position;
+
+                let pt0 = point_offset(p0, dir, -d);
+                let pt1 = point_offset(point_offset(p0, dir, -d), perp, r);
+                let pt2 = point_offset(point_offset(p0, dir, -cs_depth), perp, r);
+                let pt3 = point_offset(p0, perp, r_cs);
+                let pt4 = p0;
+
+                let v0 = builder::vertex(pt0);
+                let v1 = builder::vertex(pt1);
+                let v2 = builder::vertex(pt2);
+                let v3 = builder::vertex(pt3);
+                let v4 = builder::vertex(pt4);
+                let wire = Wire::from_iter(vec![
+                    &builder::line(&v0, &v1),
+                    &builder::line(&v1, &v2),
+                    &builder::line(&v2, &v3),
+                    &builder::line(&v3, &v4),
+                    &builder::line(&v4, &v0),
+                ]);
+                revolve(&wire, self.position, self.direction, std::f64::consts::TAU)
+            }
+            HoleType::Counterbore { diameter, depth, counterbore_diameter, counterbore_depth } => {
+                let r = diameter / 2.0;
+                let r_cb = counterbore_diameter / 2.0;
+                let d = depth.unwrap_or(large_depth);
+
+                // Profile (L-shaped cross-section):
+                // (0, -d) -> (r, -d) -> (r, -cb_depth) -> (r_cb, -cb_depth) -> (r_cb, 0) -> (0, 0)
+                let perp = perpendicular_to(dir);
+                let p0 = self.position;
+
+                let pt0 = point_offset(p0, dir, -d);
+                let pt1 = point_offset(point_offset(p0, dir, -d), perp, r);
+                let pt2 = point_offset(point_offset(p0, dir, -*counterbore_depth), perp, r);
+                let pt3 = point_offset(point_offset(p0, dir, -*counterbore_depth), perp, r_cb);
+                let pt4 = point_offset(p0, perp, r_cb);
+                let pt5 = p0;
+
+                let v0 = builder::vertex(pt0);
+                let v1 = builder::vertex(pt1);
+                let v2 = builder::vertex(pt2);
+                let v3 = builder::vertex(pt3);
+                let v4 = builder::vertex(pt4);
+                let v5 = builder::vertex(pt5);
+                let wire = Wire::from_iter(vec![
+                    &builder::line(&v0, &v1),
+                    &builder::line(&v1, &v2),
+                    &builder::line(&v2, &v3),
+                    &builder::line(&v3, &v4),
+                    &builder::line(&v4, &v5),
+                    &builder::line(&v5, &v0),
+                ]);
+                revolve(&wire, self.position, self.direction, std::f64::consts::TAU)
+            }
+        }
+    }
+}
+
+impl Feature for HoleFeature {
+    fn name(&self) -> &str { &self.name }
+    fn type_name(&self) -> &str { "Hole" }
+    fn is_suppressed(&self) -> bool { self.suppressed }
+    fn set_suppressed(&mut self, s: bool) { self.suppressed = s; }
+
+    fn execute(&self, base_shape: Option<&Shape>) -> FeatureOutput {
+        if self.suppressed {
+            return FeatureOutput {
+                shape: base_shape.cloned(),
+                add_sub_shape: None,
+                status: FeatureStatus::Suppressed,
+            };
+        }
+
+        let base = match base_shape {
+            Some(b) => b,
+            None => return FeatureOutput {
+                shape: None,
+                add_sub_shape: None,
+                status: FeatureStatus::Error("Hole requires a base shape".to_string()),
+            },
+        };
+
+        let tool = self.build_tool();
+
+        match boolean(base, &tool, BooleanOp::Cut) {
+            Ok(result) => FeatureOutput {
+                shape: Some(result),
+                add_sub_shape: Some(tool),
+                status: FeatureStatus::Ok,
+            },
+            Err(e) => FeatureOutput {
+                shape: Some(base.clone()),
+                add_sub_shape: Some(tool),
+                status: FeatureStatus::Error(format!("Hole cut failed: {e}")),
+            },
+        }
+    }
+}
+
 // ═══════════════════════════════════════════════════════════════════
 //  Helper functions
 // ═══════════════════════════════════════════════════════════════════
+
+/// Compute a vector perpendicular to the given direction.
+fn perpendicular_to(dir: Vector3) -> Vector3 {
+    let candidate = if dir.x.abs() < 0.9 {
+        Vector3::unit_x()
+    } else {
+        Vector3::unit_y()
+    };
+    dir.cross(candidate).normalize()
+}
+
+/// Offset a point along a direction by a distance.
+fn point_offset(p: Point3, dir: Vector3, dist: f64) -> Point3 {
+    Point3::new(p.x + dir.x * dist, p.y + dir.y * dist, p.z + dir.z * dist)
+}
 
 fn generate_extrusion(profile: &Wire, direction: Vector3, mode: &ExtrudeMode) -> Shape {
     match mode {

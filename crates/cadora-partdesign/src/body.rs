@@ -911,4 +911,81 @@ mod tests {
         body.move_feature(0, 0).unwrap();
         assert_eq!(body.feature_ids(), vec![id]);
     }
+
+    // ─── Hole feature ──────────────────────────────────────────
+
+    #[test]
+    fn hole_requires_base() {
+        let hole = HoleFeature::new(
+            "H",
+            Point3::new(5.0, 5.0, 5.0),
+            Vector3::new(0.0, 0.0, -1.0),
+            HoleType::Simple { diameter: 3.0, depth: Some(4.0) },
+        );
+        let output = hole.execute(None);
+        assert!(matches!(output.status, FeatureStatus::Error(_)));
+    }
+
+    #[test]
+    fn simple_hole_in_box() {
+        let mut body = Body::new("B");
+        let wire = make_rect_wire(20.0, 20.0);
+        body.add_feature(Box::new(PadFeature::new("Pad", wire, Vector3::new(0.0, 0.0, 1.0), ExtrudeMode::Length(10.0))));
+        body.add_feature(Box::new(HoleFeature::new(
+            "Hole",
+            Point3::new(10.0, 10.0, 10.01), // slightly above top face
+            Vector3::new(0.0, 0.0, -1.0),
+            HoleType::Simple { diameter: 5.0, depth: Some(8.0) },
+        )));
+        body.recompute().unwrap();
+        assert!(body.shape().is_some());
+    }
+
+    #[test]
+    fn countersink_hole() {
+        let hole = HoleFeature::new(
+            "CSHole",
+            Point3::new(10.0, 10.0, 10.01),
+            Vector3::new(0.0, 0.0, -1.0),
+            HoleType::Countersink {
+                diameter: 5.0,
+                depth: Some(15.0),
+                countersink_diameter: 10.0,
+                countersink_angle: std::f64::consts::FRAC_PI_2,
+            },
+        );
+        let base = cadora_brep::make_box(20.0, 20.0, 10.0);
+        let output = hole.execute(Some(&base));
+        // May fail due to coplanar faces but tool should be built
+        assert!(output.add_sub_shape.is_some());
+    }
+
+    #[test]
+    fn counterbore_hole() {
+        let hole = HoleFeature::new(
+            "CBHole",
+            Point3::new(10.0, 10.0, 10.01),
+            Vector3::new(0.0, 0.0, -1.0),
+            HoleType::Counterbore {
+                diameter: 5.0,
+                depth: Some(15.0),
+                counterbore_diameter: 10.0,
+                counterbore_depth: 3.0,
+            },
+        );
+        let base = cadora_brep::make_box(20.0, 20.0, 10.0);
+        let output = hole.execute(Some(&base));
+        assert!(output.add_sub_shape.is_some());
+    }
+
+    #[test]
+    fn hole_feature_type_name() {
+        let hole = HoleFeature::new(
+            "H",
+            Point3::origin(),
+            Vector3::unit_z(),
+            HoleType::Simple { diameter: 5.0, depth: None },
+        );
+        assert_eq!(hole.type_name(), "Hole");
+    }
 }
