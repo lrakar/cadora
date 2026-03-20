@@ -461,6 +461,152 @@
   </div>
 </div>
 
+<!-- ================================================================= -->
+<!-- ==================== FUTURE PHASES ============================== -->
+<!-- ================================================================= -->
+
+<h1 style="margin-top:3rem;font-size:1.5rem;border-top:1px solid var(--border);padding-top:2rem;">
+  Phase C–I — 3D Modeling &amp; GUI
+</h1>
+<p class="subtitle">Next milestones: Document Model → BRep Kernel → PartDesign → GUI</p>
+
+<!-- ==================== PHASE C ==================== -->
+<div class="phase">
+  <div class="phase-header" onclick="this.parentElement.classList.toggle('open')">
+    <h3><span class="arrow">&#9654;</span> C — Document Model &amp; Properties <span class="phase-badge badge-todo">Todo</span></h3>
+    <span class="phase-pct">0 / 45</span>
+  </div>
+  <div class="phase-body">
+    <table>
+      <tr><th></th><th>Task</th><th>Crate</th><th>Source Reference</th></tr>
+      <tr><td><span class="pending">&#9744;</span></td><td>Property system (typed properties: Int, Float, String, Link, LinkList, Placement, etc.)</td><td><span class="crate-tag">cadora-document</span></td><td class="source-ref">App::Property*, PropertyStandard.h</td></tr>
+      <tr><td><span class="pending">&#9744;</span></td><td>DocumentObject base class (name, label, properties, dependencies)</td><td><span class="crate-tag">cadora-document</span></td><td class="source-ref">App::DocumentObject</td></tr>
+      <tr><td><span class="pending">&#9744;</span></td><td>Document container (object registry, dependency DAG, recomputation)</td><td><span class="crate-tag">cadora-document</span></td><td class="source-ref">App::Document</td></tr>
+      <tr><td><span class="pending">&#9744;</span></td><td>Topological sort &amp; cascade recompute</td><td><span class="crate-tag">cadora-document</span></td><td class="source-ref">Document::recompute()</td></tr>
+      <tr><td><span class="pending">&#9744;</span></td><td>Transaction system (undo/redo at document level)</td><td><span class="crate-tag">cadora-document</span></td><td class="source-ref">App::Transaction</td></tr>
+      <tr><td><span class="pending">&#9744;</span></td><td>Placement &amp; transforms (position, rotation, quaternion)</td><td><span class="crate-tag">cadora-document</span></td><td class="source-ref">Base::Placement, Rotation</td></tr>
+      <tr><td><span class="pending">&#9744;</span></td><td>Expression engine (parameter formulas, cell references)</td><td><span class="crate-tag">cadora-document</span></td><td class="source-ref">App::Expression, ExpressionParser</td></tr>
+    </table>
+  </div>
+</div>
+
+<!-- ==================== PHASE D ==================== -->
+<div class="phase">
+  <div class="phase-header" onclick="this.parentElement.classList.toggle('open')">
+    <h3><span class="arrow">&#9654;</span> D — Shape Kernel (BRep) <span class="phase-badge badge-todo">Todo</span></h3>
+    <span class="phase-pct">0 / 55</span>
+  </div>
+  <div class="phase-body">
+    <table>
+      <tr><th></th><th>Task</th><th>Crate</th><th>Source Reference</th></tr>
+      <tr><td><span class="pending">&#9744;</span></td><td>BRep core types (Vertex, Edge, Wire, Face, Shell, Solid, CompSolid, Compound)</td><td><span class="crate-tag">cadora-brep</span></td><td class="source-ref">TopoDS_Shape hierarchy</td></tr>
+      <tr><td><span class="pending">&#9744;</span></td><td>OCCT FFI bindings or pure-Rust BRep kernel decision</td><td><span class="crate-tag">cadora-brep</span></td><td class="source-ref">opencascade-rs or truck crate</td></tr>
+      <tr><td><span class="pending">&#9744;</span></td><td>Sketch → Wire conversion (profile extraction for extrusion)</td><td><span class="crate-tag">cadora-brep</span></td><td class="source-ref">Part::TopoShape::makeElementWires</td></tr>
+      <tr><td><span class="pending">&#9744;</span></td><td>Extrusion (Prism) operation</td><td><span class="crate-tag">cadora-brep</span></td><td class="source-ref">BRepPrimAPI_MakePrism</td></tr>
+      <tr><td><span class="pending">&#9744;</span></td><td>Revolution operation</td><td><span class="crate-tag">cadora-brep</span></td><td class="source-ref">BRepPrimAPI_MakeRevol</td></tr>
+      <tr><td><span class="pending">&#9744;</span></td><td>Boolean operations (fuse, cut, common)</td><td><span class="crate-tag">cadora-brep</span></td><td class="source-ref">BRepAlgoAPI_Fuse/Cut/Common</td></tr>
+      <tr><td><span class="pending">&#9744;</span></td><td>Fillet &amp; chamfer on 3D edges</td><td><span class="crate-tag">cadora-brep</span></td><td class="source-ref">BRepFilletAPI_MakeFillet/Chamfer</td></tr>
+      <tr><td><span class="pending">&#9744;</span></td><td>Tessellation (mesh from BRep for viewport rendering)</td><td><span class="crate-tag">cadora-brep</span></td><td class="source-ref">BRepMesh_IncrementalMesh</td></tr>
+    </table>
+  </div>
+</div>
+
+<!-- ==================== PHASE E ==================== -->
+<div class="phase">
+  <div class="phase-header" onclick="this.parentElement.classList.toggle('open')">
+    <h3><span class="arrow">&#9654;</span> E — Body &amp; Feature Framework <span class="phase-badge badge-todo">Todo</span></h3>
+    <span class="phase-pct">0 / 20</span>
+  </div>
+  <div class="phase-body">
+    <table>
+      <tr><th></th><th>Task</th><th>Crate</th><th>Source Reference</th></tr>
+      <tr><td><span class="pending">&#9744;</span></td><td>Body container (ordered feature list, tip, base feature)</td><td><span class="crate-tag">cadora-partdesign</span></td><td class="source-ref">PartDesign::Body</td></tr>
+      <tr><td><span class="pending">&#9744;</span></td><td>Feature base class (shape computation pipeline, recompute)</td><td><span class="crate-tag">cadora-partdesign</span></td><td class="source-ref">PartDesign::Feature</td></tr>
+      <tr><td><span class="pending">&#9744;</span></td><td>FeatureAddSub (additive/subtractive shape fusion/cut)</td><td><span class="crate-tag">cadora-partdesign</span></td><td class="source-ref">PartDesign::FeatureAddSub</td></tr>
+      <tr><td><span class="pending">&#9744;</span></td><td>ProfileBased (sketch + direction → 3D operation pipeline)</td><td><span class="crate-tag">cadora-partdesign</span></td><td class="source-ref">PartDesign::ProfileBased</td></tr>
+      <tr><td><span class="pending">&#9744;</span></td><td>Feature tree insertion/reordering/deletion</td><td><span class="crate-tag">cadora-partdesign</span></td><td class="source-ref">Body::insertObject, addObject</td></tr>
+    </table>
+  </div>
+</div>
+
+<!-- ==================== PHASE F ==================== -->
+<div class="phase">
+  <div class="phase-header" onclick="this.parentElement.classList.toggle('open')">
+    <h3><span class="arrow">&#9654;</span> F — PartDesign Operations <span class="phase-badge badge-todo">Todo</span></h3>
+    <span class="phase-pct">0 / 50</span>
+  </div>
+  <div class="phase-body">
+    <table>
+      <tr><th></th><th>Task</th><th>Crate</th><th>Source Reference</th></tr>
+      <tr><td><span class="pending">&#9744;</span></td><td>Pad (extrude sketch profile)</td><td><span class="crate-tag">cadora-partdesign</span></td><td class="source-ref">PartDesign::Pad</td></tr>
+      <tr><td><span class="pending">&#9744;</span></td><td>Pocket (subtract extrusion)</td><td><span class="crate-tag">cadora-partdesign</span></td><td class="source-ref">PartDesign::Pocket</td></tr>
+      <tr><td><span class="pending">&#9744;</span></td><td>Revolution (rotate sketch profile)</td><td><span class="crate-tag">cadora-partdesign</span></td><td class="source-ref">PartDesign::Revolution</td></tr>
+      <tr><td><span class="pending">&#9744;</span></td><td>Groove (subtract revolution)</td><td><span class="crate-tag">cadora-partdesign</span></td><td class="source-ref">PartDesign::Groove</td></tr>
+      <tr><td><span class="pending">&#9744;</span></td><td>Fillet &amp; Chamfer (3D dress-up)</td><td><span class="crate-tag">cadora-partdesign</span></td><td class="source-ref">PartDesign::Fillet, Chamfer</td></tr>
+      <tr><td><span class="pending">&#9744;</span></td><td>Draft (taper faces)</td><td><span class="crate-tag">cadora-partdesign</span></td><td class="source-ref">PartDesign::Draft</td></tr>
+      <tr><td><span class="pending">&#9744;</span></td><td>Thickness (hollow solid)</td><td><span class="crate-tag">cadora-partdesign</span></td><td class="source-ref">PartDesign::Thickness</td></tr>
+      <tr><td><span class="pending">&#9744;</span></td><td>Linear &amp; Polar pattern</td><td><span class="crate-tag">cadora-partdesign</span></td><td class="source-ref">PartDesign::LinearPattern, PolarPattern</td></tr>
+      <tr><td><span class="pending">&#9744;</span></td><td>Mirrored feature</td><td><span class="crate-tag">cadora-partdesign</span></td><td class="source-ref">PartDesign::Mirrored</td></tr>
+      <tr><td><span class="pending">&#9744;</span></td><td>Hole feature</td><td><span class="crate-tag">cadora-partdesign</span></td><td class="source-ref">PartDesign::Hole</td></tr>
+    </table>
+  </div>
+</div>
+
+<!-- ==================== PHASE G ==================== -->
+<div class="phase">
+  <div class="phase-header" onclick="this.parentElement.classList.toggle('open')">
+    <h3><span class="arrow">&#9654;</span> G — Datums &amp; Attachment <span class="phase-badge badge-todo">Todo</span></h3>
+    <span class="phase-pct">0 / 18</span>
+  </div>
+  <div class="phase-body">
+    <table>
+      <tr><th></th><th>Task</th><th>Crate</th><th>Source Reference</th></tr>
+      <tr><td><span class="pending">&#9744;</span></td><td>DatumPlane, DatumLine, DatumPoint</td><td><span class="crate-tag">cadora-partdesign</span></td><td class="source-ref">PartDesign::Datum*</td></tr>
+      <tr><td><span class="pending">&#9744;</span></td><td>Attachment engine (~40 modes: FlatFace, NormalToEdge, etc.)</td><td><span class="crate-tag">cadora-partdesign</span></td><td class="source-ref">Part::Attacher, AttachEngine</td></tr>
+      <tr><td><span class="pending">&#9744;</span></td><td>Coordinate system (local CS for features)</td><td><span class="crate-tag">cadora-partdesign</span></td><td class="source-ref">PartDesign::CoordinateSystem</td></tr>
+      <tr><td><span class="pending">&#9744;</span></td><td>ShapeBinder (reference geometry from other bodies)</td><td><span class="crate-tag">cadora-partdesign</span></td><td class="source-ref">PartDesign::ShapeBinder</td></tr>
+    </table>
+  </div>
+</div>
+
+<!-- ==================== PHASE H ==================== -->
+<div class="phase">
+  <div class="phase-header" onclick="this.parentElement.classList.toggle('open')">
+    <h3><span class="arrow">&#9654;</span> H — File Format &amp; Persistence <span class="phase-badge badge-todo">Todo</span></h3>
+    <span class="phase-pct">0 / 15</span>
+  </div>
+  <div class="phase-body">
+    <table>
+      <tr><th></th><th>Task</th><th>Crate</th><th>Source Reference</th></tr>
+      <tr><td><span class="pending">&#9744;</span></td><td>Project file format (.cadora — ZIP archive with JSON metadata + binary shapes)</td><td><span class="crate-tag">cadora-io</span></td><td class="source-ref">.FCStd format</td></tr>
+      <tr><td><span class="pending">&#9744;</span></td><td>STEP import/export</td><td><span class="crate-tag">cadora-io</span></td><td class="source-ref">Import/Export STEP</td></tr>
+      <tr><td><span class="pending">&#9744;</span></td><td>STL import/export (mesh)</td><td><span class="crate-tag">cadora-io</span></td><td class="source-ref">Mesh::MeshObject</td></tr>
+      <tr><td><span class="pending">&#9744;</span></td><td>IGES import (legacy support)</td><td><span class="crate-tag">cadora-io</span></td><td class="source-ref">Import IGES</td></tr>
+    </table>
+  </div>
+</div>
+
+<!-- ==================== PHASE I ==================== -->
+<div class="phase">
+  <div class="phase-header" onclick="this.parentElement.classList.toggle('open')">
+    <h3><span class="arrow">&#9654;</span> I — GUI &amp; 3D Viewport <span class="phase-badge badge-todo">Todo</span></h3>
+    <span class="phase-pct">0 / 65</span>
+  </div>
+  <div class="phase-body">
+    <table>
+      <tr><th></th><th>Task</th><th>Crate</th><th>Source Reference</th></tr>
+      <tr><td><span class="pending">&#9744;</span></td><td>wgpu-based 3D viewport (camera, projection, orbit/pan/zoom)</td><td><span class="crate-tag">cadora-gui</span></td><td class="source-ref">Coin3D View3DInventor → wgpu</td></tr>
+      <tr><td><span class="pending">&#9744;</span></td><td>Mesh rendering pipeline (triangulated BRep display)</td><td><span class="crate-tag">cadora-gui</span></td><td class="source-ref">SoFCSelection, SoBrepFaceSet</td></tr>
+      <tr><td><span class="pending">&#9744;</span></td><td>Edge &amp; wireframe rendering</td><td><span class="crate-tag">cadora-gui</span></td><td class="source-ref">SoBrepEdgeSet</td></tr>
+      <tr><td><span class="pending">&#9744;</span></td><td>Sketch editor overlay (2D drawing on sketch plane)</td><td><span class="crate-tag">cadora-gui</span></td><td class="source-ref">ViewProviderSketch, EditModeCoinManager</td></tr>
+      <tr><td><span class="pending">&#9744;</span></td><td>UI framework (egui or iced — Fusion 360 style sidebar + toolbar + tree)</td><td><span class="crate-tag">cadora-gui</span></td><td class="source-ref">Qt → egui/iced</td></tr>
+      <tr><td><span class="pending">&#9744;</span></td><td>Feature tree panel</td><td><span class="crate-tag">cadora-gui</span></td><td class="source-ref">TreeWidget / Model tree</td></tr>
+      <tr><td><span class="pending">&#9744;</span></td><td>Property panel</td><td><span class="crate-tag">cadora-gui</span></td><td class="source-ref">PropertyView</td></tr>
+      <tr><td><span class="pending">&#9744;</span></td><td>Selection &amp; highlighting (face/edge/vertex picking)</td><td><span class="crate-tag">cadora-gui</span></td><td class="source-ref">SoFCSelection, SelectionManager</td></tr>
+    </table>
+  </div>
+</div>
+
 </div><!-- /container -->
 
 <footer>
