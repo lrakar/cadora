@@ -238,18 +238,18 @@
 <!-- ==================== PHASE 7 ==================== -->
 <div class="phase">
   <div class="phase-header" onclick="this.parentElement.classList.toggle('open')">
-    <h3><span class="arrow">&#9654;</span> Phase 7 — Diagnosis <span class="phase-badge badge-todo">Not Started</span></h3>
-    <span class="phase-pct">0 / 6</span>
+    <h3><span class="arrow">&#9654;</span> Phase 7 — Diagnosis <span class="phase-badge badge-done">DONE</span></h3>
+    <span class="phase-pct">6 / 6</span>
   </div>
   <div class="phase-body">
     <table>
       <tr><th></th><th>Task</th><th>Crate</th><th>Source Reference</th></tr>
-      <tr><td><span class="pending">&#9675;</span></td><td>makeReducedJacobian — constraint Jacobian builder</td><td><span class="crate-tag">cadora-diagnosis</span></td><td class="source-ref">GCS.cpp diagnose()</td></tr>
-      <tr><td><span class="pending">&#9675;</span></td><td>Dense QR decomposition + rank computation</td><td><span class="crate-tag">cadora-diagnosis</span></td><td class="source-ref">GCS.cpp:5100-5200</td></tr>
-      <tr><td><span class="pending">&#9675;</span></td><td>Sparse QR decomposition + rank computation</td><td><span class="crate-tag">cadora-diagnosis</span></td><td class="source-ref">GCS.cpp:5200-5300</td></tr>
-      <tr><td><span class="pending">&#9675;</span></td><td>RREF + dependency group identification</td><td><span class="crate-tag">cadora-diagnosis</span></td><td class="source-ref">GCS.cpp eliminateNonZerosOverPivot</td></tr>
-      <tr><td><span class="pending">&#9675;</span></td><td>Conflict/redundancy detection (popularity contest)</td><td><span class="crate-tag">cadora-diagnosis</span></td><td class="source-ref">GCS.cpp identifyConflictingRedundant</td></tr>
-      <tr><td><span class="pending">&#9675;</span></td><td>Parallel QR via rayon + DOF tests</td><td><span class="crate-tag">cadora-diagnosis</span></td><td class="source-ref">GCS.cpp std::async section</td></tr>
+      <tr><td><span class="check">&#10003;</span></td><td>makeReducedJacobian — constraint Jacobian builder (excludes driven params, non-driving constraints)</td><td><span class="crate-tag">cadora-diagnosis</span></td><td class="source-ref">GCS.cpp:4712-4760</td></tr>
+      <tr><td><span class="check">&#10003;</span></td><td>QR decomposition + rank computation (col-pivoted QR of J^T and J)</td><td><span class="crate-tag">cadora-diagnosis</span></td><td class="source-ref">GCS.cpp:5060-5230</td></tr>
+      <tr><td><span class="check">&#10003;</span></td><td>RREF + dependency group identification (eliminateNonZerosOverPivot)</td><td><span class="crate-tag">cadora-diagnosis</span></td><td class="source-ref">GCS.cpp:5428-5444</td></tr>
+      <tr><td><span class="check">&#10003;</span></td><td>Conflict/redundancy detection (popularity contest algorithm)</td><td><span class="crate-tag">cadora-diagnosis</span></td><td class="source-ref">GCS.cpp:5445-5700</td></tr>
+      <tr><td><span class="check">&#10003;</span></td><td>Dependent parameter identification (identifyDependentParameters via J QR)</td><td><span class="crate-tag">cadora-diagnosis</span></td><td class="source-ref">GCS.cpp:5242-5340</td></tr>
+      <tr><td><span class="check">&#10003;</span></td><td>diagnose() entry point + DiagnosisResult struct + 12 tests (DOF, conflicts, redundancy, deps)</td><td><span class="crate-tag">cadora-diagnosis</span></td><td class="source-ref">GCS.cpp:4759-4902</td></tr>
     </table>
   </div>
 </div>

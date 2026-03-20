@@ -30,6 +30,9 @@ pub trait Constraint {
 
     /// For driven constraints: set the value parameter to match current geometry.
     fn evaluate(&self, _store: &mut ParamStore) {}
+
+    /// Whether this constraint is an internal-alignment constraint (excluded from conflict reporting).
+    fn is_internal_alignment(&self) -> bool { false }
 }
 
 // ---------------------------------------------------------------------------
@@ -1269,6 +1272,7 @@ impl Constraint for ConstraintInternalAlignmentPoint2Ellipse {
     fn params(&self) -> &[ParamIdx] { &self.pvec }
     fn tag(&self) -> Tag { self.tag }
     fn is_driving(&self) -> bool { self.driving }
+    fn is_internal_alignment(&self) -> bool { true }
 }
 
 // ---------------------------------------------------------------------------
@@ -1376,6 +1380,7 @@ impl Constraint for ConstraintInternalAlignmentPoint2Hyperbola {
     fn params(&self) -> &[ParamIdx] { &self.pvec }
     fn tag(&self) -> Tag { self.tag }
     fn is_driving(&self) -> bool { self.driving }
+    fn is_internal_alignment(&self) -> bool { true }
 }
 
 // ---------------------------------------------------------------------------
