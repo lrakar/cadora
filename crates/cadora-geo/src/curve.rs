@@ -786,6 +786,167 @@ impl Curve for BSpline {
         DeriVector2::zero()
     }
 
+    /// Full CalculateNormal port from FreeCAD Geo.cpp.
+    ///
+    /// Computes the tangent at parameter `u` using NURBS homogeneous coordinates,
+    /// then differentiates w.r.t. `deriv_param` (pole, weight, or u itself).
+    /// When `deriv_param` matches the curve parameter, computes the second derivative (curvature).
+    /// Returns `tangent.rotate90ccw()`.
+    fn normal_at_param(
+        &self,
+        store: &ParamStore,
+        u: f64,
+        deriv_param: Option<ParamIdx>,
+    ) -> DeriVector2 {
+        let startpole = self.find_start_pole(store, u);
+        let np = self.degree + 1;
+
+        let polexat = |i: usize| self.poles[(startpole + i) % self.poles.len()].x;
+        let poleyat = |i: usize| self.poles[(startpole + i) % self.poles.len()].y;
+        let weight_idx = |i: usize| self.weights[(startpole + i) % self.weights.len()];
+
+        let px = |i: usize| store.get(polexat(i));
+        let py = |i: usize| store.get(poleyat(i));
+        let wt = |i: usize| store.get(weight_idx(i));
+
+        let (xsum, ysum, wsum, xslopesum, yslopesum, wslopesum) =
+            self.value_homogeneous(store, u);
+
+        // Tangent = (w * d(xw)/du - dw/du * xw,  w * d(yw)/du - dw/du * yw)
+        let mut result = DeriVector2::new(
+            wsum * xslopesum - wslopesum * xsum,
+            0.0,
+            wsum * yslopesum - wslopesum * ysum,
+            0.0,
+        );
+
+        if let Some(dparam) = deriv_param {
+            // Check if deriv_param matches a pole or weight in the active range
+            let mut found_pole_or_weight = false;
+            for i in 0..np {
+                let is_px = dparam == polexat(i);
+                let is_py = dparam == poleyat(i);
+                let is_w = dparam == weight_idx(i);
+                if !is_px && !is_py && !is_w {
+                    continue;
+                }
+
+                // Compute basis function factor and slope factor for pole i
+                let mut d = vec![0.0; np];
+                d[i] = 1.0;
+                let factor = Self::spline_value(
+                    u, startpole + self.degree, self.degree, &mut d, &self.flat_knots,
+                );
+
+                let mut sd = vec![0.0; np - 1];
+                if i > 0 {
+                    sd[i - 1] = 1.0
+                        / (self.flat_knots[startpole + i + self.degree]
+                            - self.flat_knots[startpole + i]);
+                }
+                if i < np - 1 {
+                    sd[i] = -1.0
+                        / (self.flat_knots[startpole + i + 1 + self.degree]
+                            - self.flat_knots[startpole + i + 1]);
+                }
+                let slopefactor = Self::spline_value(
+                    u, startpole + self.degree, self.degree - 1, &mut sd, &self.flat_knots,
+                );
+
+                if is_px {
+                    result.dx = self.degree as f64
+                        * wt(i) * (wsum * slopefactor - wslopesum * factor);
+                } else if is_py {
+                    result.dy = self.degree as f64
+                        * wt(i) * (wsum * slopefactor - wslopesum * factor);
+                } else {
+                    // weight derivative:
+                    // d/d(w_i) T_x = factor*(xslopesum - wslopesum*px_i) + degree*slopefactor*(wsum*px_i - xsum)
+                    let deg = self.degree as f64;
+                    result.dx = factor * (xslopesum - wslopesum * px(i))
+                        + deg * slopefactor * (wsum * px(i) - xsum);
+                    result.dy = factor * (yslopesum - wslopesum * py(i))
+                        + deg * slopefactor * (wsum * py(i) - ysum);
+                }
+                found_pole_or_weight = true;
+                break;
+            }
+
+            // If deriv_param is NOT a pole/weight, check if it's the curve parameter
+            // In that case compute second derivative (curvature direction)
+            if !found_pole_or_weight {
+                // Second derivative via double differences
+                let k = startpole + self.degree;
+
+                // d²w/du²
+                let mut sd = vec![0.0; np - 1];
+                for i in 1..np {
+                    sd[i - 1] = (wt(i) - wt(i - 1))
+                        / (self.flat_knots[startpole + i + self.degree]
+                            - self.flat_knots[startpole + i]);
+                }
+                let mut ssd = vec![0.0; np.saturating_sub(2)];
+                for i in 1..np.saturating_sub(1) {
+                    ssd[i - 1] = (sd[i] - sd[i - 1])
+                        / (self.flat_knots[startpole + i + self.degree]
+                            - self.flat_knots[startpole + i]);
+                }
+                let wslopeslopesum = if self.degree >= 2 {
+                    self.degree as f64
+                        * (self.degree as f64 - 1.0)
+                        * Self::spline_value(u, k, self.degree - 2, &mut ssd, &self.flat_knots)
+                } else {
+                    0.0
+                };
+
+                // d²(xw)/du²
+                for i in 1..np {
+                    sd[i - 1] = (px(i) * wt(i) - px(i - 1) * wt(i - 1))
+                        / (self.flat_knots[startpole + i + self.degree]
+                            - self.flat_knots[startpole + i]);
+                }
+                let mut ssd = vec![0.0; np.saturating_sub(2)];
+                for i in 1..np.saturating_sub(1) {
+                    ssd[i - 1] = (sd[i] - sd[i - 1])
+                        / (self.flat_knots[startpole + i + self.degree]
+                            - self.flat_knots[startpole + i]);
+                }
+                let xslopeslopesum = if self.degree >= 2 {
+                    self.degree as f64
+                        * (self.degree as f64 - 1.0)
+                        * Self::spline_value(u, k, self.degree - 2, &mut ssd, &self.flat_knots)
+                } else {
+                    0.0
+                };
+
+                // d²(yw)/du²
+                for i in 1..np {
+                    sd[i - 1] = (py(i) * wt(i) - py(i - 1) * wt(i - 1))
+                        / (self.flat_knots[startpole + i + self.degree]
+                            - self.flat_knots[startpole + i]);
+                }
+                let mut ssd = vec![0.0; np.saturating_sub(2)];
+                for i in 1..np.saturating_sub(1) {
+                    ssd[i - 1] = (sd[i] - sd[i - 1])
+                        / (self.flat_knots[startpole + i + self.degree]
+                            - self.flat_knots[startpole + i]);
+                }
+                let yslopeslopesum = if self.degree >= 2 {
+                    self.degree as f64
+                        * (self.degree as f64 - 1.0)
+                        * Self::spline_value(u, k, self.degree - 2, &mut ssd, &self.flat_knots)
+                } else {
+                    0.0
+                };
+
+                result.dx = wsum * xslopeslopesum - wslopeslopesum * xsum;
+                result.dy = wsum * yslopeslopesum - wslopeslopesum * ysum;
+            }
+        }
+
+        result.rotate90ccw()
+    }
+
     fn params(&self) -> Vec<ParamIdx> {
         let mut p = Vec::new();
         for pole in &self.poles {
@@ -1014,5 +1175,125 @@ mod tests {
         let vp = hyp.value(&s, u, 0.0, None);
         assert_abs_diff_eq!(v.dx, (vp.x - v.x) / eps, epsilon = 1e-5);
         assert_abs_diff_eq!(v.dy, (vp.y - v.y) / eps, epsilon = 1e-5);
+    }
+
+    // -----------------------------------------------------------------------
+    // BSpline tests
+    // -----------------------------------------------------------------------
+
+    /// Create a cubic Bezier curve (degree 3, 4 control points, all weights=1).
+    /// Poles: (0,0), (1,2), (3,2), (4,0), knots: [0, 1], mult: [4, 4]
+    fn make_cubic_bezier() -> (ParamStore, BSpline) {
+        let mut s = ParamStore::new();
+        let poles = vec![
+            Point::new(s.push(0.0), s.push(0.0)),
+            Point::new(s.push(1.0), s.push(2.0)),
+            Point::new(s.push(3.0), s.push(2.0)),
+            Point::new(s.push(4.0), s.push(0.0)),
+        ];
+        let weights: Vec<ParamIdx> = (0..4).map(|_| s.push(1.0)).collect();
+        let knots = vec![s.push(0.0), s.push(1.0)];
+        let mult = vec![4, 4];
+        let start = poles[0];
+        let end = poles[3];
+        let mut bsp = BSpline {
+            start, end, poles, weights, knots, mult,
+            degree: 3, periodic: false, flat_knots: vec![],
+        };
+        bsp.setup_flat_knots(&s);
+        (s, bsp)
+    }
+
+    #[test]
+    fn bspline_cubic_bezier_endpoints() {
+        let (s, bsp) = make_cubic_bezier();
+        let v0 = bsp.value(&s, 0.0, 0.0, None);
+        assert_abs_diff_eq!(v0.x, 0.0, epsilon = 1e-12);
+        assert_abs_diff_eq!(v0.y, 0.0, epsilon = 1e-12);
+        let v1 = bsp.value(&s, 1.0, 0.0, None);
+        assert_abs_diff_eq!(v1.x, 4.0, epsilon = 1e-12);
+        assert_abs_diff_eq!(v1.y, 0.0, epsilon = 1e-12);
+    }
+
+    #[test]
+    fn bspline_cubic_bezier_midpoint() {
+        let (s, bsp) = make_cubic_bezier();
+        // For uniform-weight cubic Bezier: B(0.5) = 0.125*P0 + 0.375*P1 + 0.375*P2 + 0.125*P3
+        // x = 0.125*0 + 0.375*1 + 0.375*3 + 0.125*4 = 0 + 0.375 + 1.125 + 0.5 = 2.0
+        // y = 0.125*0 + 0.375*2 + 0.375*2 + 0.125*0 = 0 + 0.75 + 0.75 + 0 = 1.5
+        let v = bsp.value(&s, 0.5, 0.0, None);
+        assert_abs_diff_eq!(v.x, 2.0, epsilon = 1e-12);
+        assert_abs_diff_eq!(v.y, 1.5, epsilon = 1e-12);
+    }
+
+    #[test]
+    fn bspline_nurbs_weighted() {
+        // Raise weight of P1 to 2.0 — should pull curve toward P1
+        let (mut s, bsp) = make_cubic_bezier();
+        s.set(bsp.weights[1], 2.0);
+        let v_uniform = DeriVector2::new(2.0, 0.0, 1.5, 0.0); // from test above
+        let v_weighted = bsp.value(&s, 0.5, 0.0, None);
+        // With higher weight on P1=(1,2), curve should shift toward P1
+        assert!(v_weighted.x < v_uniform.x, "weighted x should be pulled left");
+        assert!(v_weighted.y > v_uniform.y, "weighted y should be pulled up");
+    }
+
+    #[test]
+    fn bspline_normal_at_param_tangent_direction() {
+        let (s, bsp) = make_cubic_bezier();
+        // At u=0, tangent is in direction P1-P0 = (1,2). Normal = (-2,1) (rotated 90 CCW)
+        let n = bsp.normal_at_param(&s, 0.0, None);
+        let scale = (n.x * n.x + n.y * n.y).sqrt();
+        assert!(scale > 1e-10, "normal should be nonzero");
+        assert_abs_diff_eq!(n.x / scale, -2.0 / 5.0_f64.sqrt(), epsilon = 1e-6);
+        assert_abs_diff_eq!(n.y / scale, 1.0 / 5.0_f64.sqrt(), epsilon = 1e-6);
+    }
+
+    #[test]
+    fn bspline_normal_derivative_wrt_pole_fd() {
+        let (mut s, bsp) = make_cubic_bezier();
+        let dp = bsp.poles[1].x; // differentiate w.r.t. pole1.x
+        let u = 0.3;
+        let n = bsp.normal_at_param(&s, u, Some(dp));
+        let eps = 1e-7;
+        let n0 = bsp.normal_at_param(&s, u, None);
+        s.set(dp, s.get(dp) + eps);
+        let n1 = bsp.normal_at_param(&s, u, None);
+        assert_abs_diff_eq!(n.dx, (n1.x - n0.x) / eps, epsilon = 1e-4);
+        assert_abs_diff_eq!(n.dy, (n1.y - n0.y) / eps, epsilon = 1e-4);
+    }
+
+    #[test]
+    fn bspline_normal_derivative_wrt_weight_fd() {
+        let (mut s, mut bsp) = make_cubic_bezier();
+        s.set(bsp.weights[1], 2.0); // non-trivial weight
+        bsp.setup_flat_knots(&s);
+        let dp = bsp.weights[1];
+        let u = 0.5;
+        let n = bsp.normal_at_param(&s, u, Some(dp));
+        let eps = 1e-7;
+        let n0 = bsp.normal_at_param(&s, u, None);
+        s.set(dp, s.get(dp) + eps);
+        let n1 = bsp.normal_at_param(&s, u, None);
+        assert_abs_diff_eq!(n.dx, (n1.x - n0.x) / eps, epsilon = 1e-4);
+        assert_abs_diff_eq!(n.dy, (n1.y - n0.y) / eps, epsilon = 1e-4);
+    }
+
+    #[test]
+    fn bspline_periodic_setup_flat_knots() {
+        // Periodic cubic with knots [0,1,2,3], mult [1,1,1,1]
+        let mut s = ParamStore::new();
+        let poles: Vec<Point> = (0..3).map(|_| Point::new(s.push(0.0), s.push(0.0))).collect();
+        let weights: Vec<ParamIdx> = (0..3).map(|_| s.push(1.0)).collect();
+        let knots = vec![s.push(0.0), s.push(1.0), s.push(2.0), s.push(3.0)];
+        let mut bsp = BSpline {
+            start: poles[0], end: poles[2],
+            poles, weights, knots,
+            mult: vec![1, 1, 1, 1],
+            degree: 3, periodic: true, flat_knots: vec![],
+        };
+        bsp.setup_flat_knots(&s);
+        // Periodic padding adds degree+1-mult[0] = 3 knots on each side
+        assert!(bsp.flat_knots.len() > 4, "periodic padding should extend knot vector");
     }
 }

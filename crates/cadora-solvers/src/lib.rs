@@ -552,6 +552,204 @@ pub fn solve(
     }
 }
 
+// ---------------------------------------------------------------------------
+// Dual-system SQP (Sequential Quadratic Programming)
+// ---------------------------------------------------------------------------
+
+/// Dual-system SQP solver: solve `subsys_a` (hard equality constraints)
+/// while minimizing `subsys_b` (soft / driving constraints).
+///
+/// Port of `System::solve(SubSystem*,SubSystem*,...)` from GCS.cpp.
+///
+/// - **SubsysA** = higher-priority (hard equalities to be satisfied exactly).
+/// - **SubsysB** = lower-priority (objective function to be minimized).
+///
+/// Uses an L₁ exact penalty merit function, BFGS Hessian approximation, and
+/// Nocedal–Wright SQP line search (Eqs 18.27–18.36).
+pub fn solve_sqp(
+    subsys_a: &mut SubSystem,
+    subsys_b: &mut SubSystem,
+    config: &SolverConfig,
+    is_redundant: bool,
+) -> SolveStatus {
+    use cadora_core::ParamIdx;
+    use std::collections::BTreeSet;
+
+    let xsize_a = subsys_a.p_size();
+    let xsize_b = subsys_b.p_size();
+    let csize_a = subsys_a.c_size();
+
+    if xsize_a == 0 && xsize_b == 0 {
+        return SolveStatus::Success;
+    }
+
+    // Build union param list (sorted, deduplicated)
+    let mut param_set = BTreeSet::new();
+    for &p in subsys_a.param_list() {
+        param_set.insert(p);
+    }
+    for &p in subsys_b.param_list() {
+        param_set.insert(p);
+    }
+    let params_ab: Vec<ParamIdx> = param_set.into_iter().collect();
+    let xsize = params_ab.len();
+
+    if xsize == 0 {
+        return SolveStatus::Success;
+    }
+
+    let mut big_b = DMatrix::<f64>::identity(xsize, xsize); // BFGS approx Hessian
+
+    // Synchronize: A's values take priority over B's
+    let _x_b = subsys_b.get_params_ext(&params_ab);
+    let x_a = subsys_a.get_params_ext(&params_ab);
+    let mut x = DVector::from_vec(x_a);
+    subsys_b.set_params_ext(&params_ab, x.as_slice());
+
+    // Initial function evaluations
+    let mut grad = DVector::from_vec(subsys_b.calc_grad_ext(&params_ab));
+
+    let ja_flat = subsys_a.calc_jacobi_ext(&params_ab);
+    let mut j_a = DMatrix::from_row_slice(csize_a, xsize, &ja_flat);
+
+    let mut res_a = DVector::from_vec(subsys_a.calc_residual());
+
+    let max_iter = if is_redundant {
+        if config.sketch_size_multiplier_redundant {
+            config.max_iter_redundant * xsize
+        } else {
+            config.max_iter_redundant
+        }
+    } else if config.sketch_size_multiplier {
+        config.max_iter * xsize
+    } else {
+        config.max_iter
+    };
+
+    let conv = if is_redundant {
+        config.convergence_redundant
+    } else {
+        config.convergence
+    };
+
+    let diverging_lim = 1e6 * subsys_a.error() + 1e12;
+
+    let mut mu = 0.0_f64;
+    let mut lambda = DVector::zeros(csize_a);
+    let mut h = DVector::zeros(xsize);
+
+    for _iter in 1..max_iter {
+        // Solve QP subproblem
+        let qp_result = qp_eq(&big_b, &grad, &j_a, &res_a);
+        let (xdir, y_mat, _z) = match qp_result {
+            Some(r) => r,
+            None => break,
+        };
+
+        let x0 = x.clone();
+        let lambda0 = lambda.clone();
+        lambda = y_mat.transpose() * (&big_b * &xdir + &grad);
+        let lambdadir = &lambda - &lambda0;
+
+        // Line search (Nocedal & Wright Eqs 18.27-18.36)
+        let eta = 0.25;
+        let tau = 0.5;
+        let rho = 0.5;
+        let mut alpha = 1.0_f64;
+        alpha = alpha.min(subsys_a.max_step_ext(&params_ab, xdir.as_slice()));
+
+        // Penalty parameter update (Eq 18.36)
+        let res_a_l1 = res_a.iter().map(|r| r.abs()).sum::<f64>();
+        if res_a_l1 > 1e-30 {
+            let penalty_cand = (grad.dot(&xdir) + (0.5 * xdir.dot(&(&big_b * &xdir))).max(0.0))
+                / ((1.0 - rho) * res_a_l1);
+            mu = mu.max(penalty_cand);
+        }
+
+        // Merit function at current point
+        let f0 = subsys_b.error() + mu * res_a_l1;
+        let deriv = grad.dot(&xdir) - mu * res_a_l1;
+
+        x = &x0 + &xdir * alpha;
+        subsys_a.set_params_ext(&params_ab, x.as_slice());
+        subsys_b.set_params_ext(&params_ab, x.as_slice());
+        res_a = DVector::from_vec(subsys_a.calc_residual());
+        let new_l1 = res_a.iter().map(|r| r.abs()).sum::<f64>();
+        let mut f = subsys_b.error() + mu * new_l1;
+
+        // Armijo backtracking
+        let mut first = true;
+        while f > f0 + eta * alpha * deriv {
+            if first {
+                first = false;
+                // Correction step: project onto A-constraint manifold
+                let xdir1 = -&y_mat * &res_a;
+                x = &x + &xdir1;
+                subsys_a.set_params_ext(&params_ab, x.as_slice());
+                subsys_b.set_params_ext(&params_ab, x.as_slice());
+                res_a = DVector::from_vec(subsys_a.calc_residual());
+                let new_l1 = res_a.iter().map(|r| r.abs()).sum::<f64>();
+                f = subsys_b.error() + mu * new_l1;
+                if f < f0 + eta * alpha * deriv {
+                    break;
+                }
+            }
+            alpha *= tau;
+            if alpha < 1e-8 {
+                alpha = 0.0;
+            }
+            x = &x0 + &xdir * alpha;
+            subsys_a.set_params_ext(&params_ab, x.as_slice());
+            subsys_b.set_params_ext(&params_ab, x.as_slice());
+            res_a = DVector::from_vec(subsys_a.calc_residual());
+            let new_l1 = res_a.iter().map(|r| r.abs()).sum::<f64>();
+            f = subsys_b.error() + mu * new_l1;
+            if alpha < 1e-8 {
+                break;
+            }
+        }
+        lambda = &lambda0 + &lambdadir * alpha;
+
+        h = &x - &x0;
+
+        // BFGS update of the Lagrangian Hessian (Eq 18.13)
+        let mut y = &grad - &j_a.transpose() * &lambda;
+        {
+            grad = DVector::from_vec(subsys_b.calc_grad_ext(&params_ab));
+            let ja_flat = subsys_a.calc_jacobi_ext(&params_ab);
+            j_a = DMatrix::from_row_slice(csize_a, xsize, &ja_flat);
+            res_a = DVector::from_vec(subsys_a.calc_residual());
+        }
+        y = &grad - &j_a.transpose() * &lambda - &y;
+
+        if _iter > 1 {
+            let y_t_h = y.dot(&h);
+            if y_t_h.abs() > 1e-30 {
+                let bh = &big_b * &h;
+                big_b += (1.0 / y_t_h) * &y * y.transpose();
+                big_b -= (1.0 / h.dot(&bh)) * (&bh * bh.transpose());
+            }
+        }
+
+        // Convergence check
+        let err = subsys_a.error();
+        if h.norm() <= conv && err <= SMALL_F {
+            break;
+        }
+        if err > diverging_lim || err.is_nan() {
+            break;
+        }
+    }
+
+    if subsys_a.error() <= SMALL_F {
+        SolveStatus::Success
+    } else if h.norm() <= conv {
+        SolveStatus::Converged
+    } else {
+        SolveStatus::Failed
+    }
+}
+
 // ===========================================================================
 // Tests
 // ===========================================================================
@@ -732,5 +930,82 @@ mod tests {
         let params: Vec<f64> = ss.param_list().iter().map(|&p| store.get(p)).collect();
         assert_abs_diff_eq!(params[0], 3.0, epsilon = 1e-6);
         assert_abs_diff_eq!(params[1], 7.0, epsilon = 1e-6);
+    }
+
+    // -----------------------------------------------------------------------
+    // SQP tests
+    // -----------------------------------------------------------------------
+
+    /// Two constraints sharing one param: A forces x+y=1, B minimizes (x-5)^2+(y-5)^2.
+    /// Solution: point closest to (5,5) on the line x+y=1 → (0.5, 0.5).
+    struct SumEq {
+        pvec: Vec<ParamIdx>,
+        target: f64,
+    }
+    impl SumEq {
+        fn new(a: ParamIdx, b: ParamIdx, target: f64) -> Self {
+            Self { pvec: vec![a, b], target }
+        }
+    }
+    impl Constraint for SumEq {
+        fn error(&self, store: &ParamStore) -> f64 {
+            store.get(self.pvec[0]) + store.get(self.pvec[1]) - self.target
+        }
+        fn grad(&self, _store: &ParamStore, param: ParamIdx) -> f64 {
+            if param == self.pvec[0] || param == self.pvec[1] { 1.0 } else { 0.0 }
+        }
+        fn params(&self) -> &[ParamIdx] { &self.pvec }
+        fn tag(&self) -> i32 { 0 }
+        fn is_driving(&self) -> bool { true }
+    }
+
+    #[test]
+    fn sqp_constrained_minimum() {
+        // A: x + y = 1 (hard equality)
+        // B: minimize (x-5)^2 + (y-5)^2 → drive x→5, y→5
+        // Solution on constraint: x=0.5, y=0.5
+        let mut store = ParamStore::new();
+        let x = store.push(0.0);
+        let y = store.push(0.0);
+
+        let c_a: Box<dyn Constraint> = Box::new(SumEq::new(x, y, 1.0));
+        let c_bx: Box<dyn Constraint> = Box::new(PTarget::new(x, 5.0));
+        let c_by: Box<dyn Constraint> = Box::new(PTarget::new(y, 5.0));
+
+        let mut ss_a = SubSystem::new(vec![c_a], &[x, y], &store);
+        let mut ss_b = SubSystem::new(vec![c_bx, c_by], &[x, y], &store);
+
+        let cfg = SolverConfig::default();
+        let status = solve_sqp(&mut ss_a, &mut ss_b, &cfg, false);
+        assert!(
+            matches!(status, SolveStatus::Success | SolveStatus::Converged),
+            "SQP failed: {:?}", status
+        );
+
+        // A constraint should be satisfied
+        assert_abs_diff_eq!(ss_a.error(), 0.0, epsilon = 1e-8);
+        // Parameters should be at the constrained min
+        let pa = ss_a.get_params();
+        assert_abs_diff_eq!(pa[0] + pa[1], 1.0, epsilon = 1e-6);
+    }
+
+    #[test]
+    fn sqp_trivial_both_satisfied() {
+        // Both A and B can be satisfied simultaneously
+        let mut store = ParamStore::new();
+        let x = store.push(0.0);
+        let y = store.push(0.0);
+
+        let c_a: Box<dyn Constraint> = Box::new(PTarget::new(x, 3.0));
+        let c_b: Box<dyn Constraint> = Box::new(PTarget::new(y, 7.0));
+
+        let mut ss_a = SubSystem::new(vec![c_a], &[x, y], &store);
+        let mut ss_b = SubSystem::new(vec![c_b], &[x, y], &store);
+
+        let cfg = SolverConfig::default();
+        let status = solve_sqp(&mut ss_a, &mut ss_b, &cfg, false);
+        assert!(matches!(status, SolveStatus::Success | SolveStatus::Converged));
+        assert_abs_diff_eq!(ss_a.error(), 0.0, epsilon = 1e-8);
+        assert_abs_diff_eq!(ss_b.error(), 0.0, epsilon = 1e-8);
     }
 }

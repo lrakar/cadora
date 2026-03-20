@@ -2693,6 +2693,223 @@ impl Constraint for ConstraintP2CDistance {
 }
 
 // ---------------------------------------------------------------------------
+// PointOnBSpline: constrain one coordinate of a point to lie on a BSpline
+// ---------------------------------------------------------------------------
+
+#[allow(dead_code)] // mult, periodic, update_start_pole kept for mutable solver path
+pub struct ConstraintPointOnBSpline {
+    pvec: Vec<ParamIdx>,
+    scale: f64,
+    pub tag: Tag,
+    pub driving: bool,
+    /// The BSpline geometry (owned reference data: degree, mult, flat_knots, periodic).
+    degree: usize,
+    mult: Vec<usize>,
+    flat_knots: Vec<f64>,
+    periodic: bool,
+    /// Number of poles in the BSpline (= degree + 1 active per span).
+    num_poles: usize,
+    num_weights: usize,
+    /// Current start pole (updated when u leaves the current knot span).
+    startpole: usize,
+}
+
+impl ConstraintPointOnBSpline {
+    /// `point` = the constrained coordinate param, `u_param` = curve parameter,
+    /// `poles` = pole coordinates for the chosen axis (x or y),
+    /// `weights` = all weight params, `bsp` = BSpline for structural info.
+    pub fn new(
+        point: ParamIdx,
+        u_param: ParamIdx,
+        poles: &[ParamIdx],
+        weights: &[ParamIdx],
+        bsp: &cadora_geo::BSpline,
+        store: &ParamStore,
+        tag: Tag,
+        driving: bool,
+    ) -> Self {
+        let mut pvec = Vec::with_capacity(2 + poles.len() + weights.len());
+        pvec.push(point);
+        pvec.push(u_param);
+        pvec.extend_from_slice(poles);
+        pvec.extend_from_slice(weights);
+
+        let u = store.get(u_param);
+        let startpole = Self::find_start_pole_static(u, &bsp.mult, &bsp.flat_knots, bsp.degree, bsp.periodic, poles.len());
+
+        Self {
+            pvec,
+            scale: 1.0,
+            tag,
+            driving,
+            degree: bsp.degree,
+            mult: bsp.mult.clone(),
+            flat_knots: bsp.flat_knots.clone(),
+            periodic: bsp.periodic,
+            num_poles: poles.len(),
+            num_weights: weights.len(),
+            startpole,
+        }
+    }
+
+    #[inline] fn thepoint(&self) -> ParamIdx { self.pvec[0] }
+    #[inline] fn theparam(&self) -> ParamIdx { self.pvec[1] }
+    #[inline]
+    fn poleat(&self, i: usize) -> ParamIdx {
+        self.pvec[2 + (self.startpole + i) % self.num_poles]
+    }
+    #[inline]
+    fn weightat(&self, i: usize) -> ParamIdx {
+        self.pvec[2 + self.num_poles + (self.startpole + i) % self.num_weights]
+    }
+
+    fn numpoints(&self) -> usize {
+        self.degree + 1
+    }
+
+    fn find_start_pole_static(
+        u: f64, mult: &[usize], flat_knots: &[f64], degree: usize, periodic: bool, num_poles: usize,
+    ) -> usize {
+        // Find which knot span u lies in by accumulating multiplicities
+        let knot_count = mult.len();
+        let mut startpole = 0;
+        // We need the knot values from flat_knots. The j-th distinct knot value
+        // is at flat_knots[sum of mult[0..j]].
+        let mut knot_pos = mult[0]; // index after first knot's multiplicity
+        for j in 1..knot_count {
+            let knot_val = flat_knots[knot_pos];
+            if knot_val <= u {
+                startpole += mult[j];
+            } else {
+                break;
+            }
+            knot_pos += mult[j];
+        }
+        if !periodic && startpole >= num_poles {
+            startpole = num_poles - degree - 1;
+        }
+        startpole
+    }
+
+    #[allow(dead_code)]
+    fn update_start_pole(&mut self, u: f64) {
+        let k = self.startpole + self.degree;
+        if u < self.flat_knots[k] || u > self.flat_knots[k + 1] {
+            self.startpole = Self::find_start_pole_static(
+                u, &self.mult, &self.flat_knots, self.degree, self.periodic, self.num_poles,
+            );
+        }
+    }
+}
+
+impl Constraint for ConstraintPointOnBSpline {
+    fn error(&self, store: &ParamStore) -> f64 {
+        let u = store.get(self.theparam());
+        // NOTE: startpole updated lazily via &mut self; use current cached value
+        let np = self.numpoints();
+
+        let mut d = vec![0.0; np];
+        for i in 0..np {
+            d[i] = store.get(self.poleat(i)) * store.get(self.weightat(i));
+        }
+        let sum = cadora_geo::BSpline::spline_value(
+            u, self.startpole + self.degree, self.degree, &mut d, &self.flat_knots,
+        );
+
+        for i in 0..np {
+            d[i] = store.get(self.weightat(i));
+        }
+        let wsum = cadora_geo::BSpline::spline_value(
+            u, self.startpole + self.degree, self.degree, &mut d, &self.flat_knots,
+        );
+
+        // error = point * w_sum - xw_sum (zero when point == x/w)
+        self.scale * (store.get(self.thepoint()) * wsum - sum)
+    }
+
+    fn grad(&self, store: &ParamStore, param: ParamIdx) -> f64 {
+        let u = store.get(self.theparam());
+        let np = self.numpoints();
+        let k = self.startpole + self.degree;
+        let mut deriv = 0.0;
+
+        // d(error)/d(point) = w_sum
+        if param == self.thepoint() {
+            let mut d = vec![0.0; np];
+            for i in 0..np {
+                d[i] = store.get(self.weightat(i));
+            }
+            let wsum = cadora_geo::BSpline::spline_value(u, k, self.degree, &mut d, &self.flat_knots);
+            deriv += wsum;
+        }
+
+        // d(error)/d(u)
+        if param == self.theparam() {
+            // slope of xw
+            let mut sd = vec![0.0; np - 1];
+            for i in 1..np {
+                sd[i - 1] =
+                    (store.get(self.poleat(i)) * store.get(self.weightat(i))
+                     - store.get(self.poleat(i - 1)) * store.get(self.weightat(i - 1)))
+                    / (self.flat_knots[self.startpole + i + self.degree]
+                       - self.flat_knots[self.startpole + i]);
+            }
+            let slopevalue = cadora_geo::BSpline::spline_value(
+                u, k, self.degree - 1, &mut sd, &self.flat_knots,
+            );
+
+            // slope of w
+            for i in 1..np {
+                sd[i - 1] =
+                    (store.get(self.weightat(i)) - store.get(self.weightat(i - 1)))
+                    / (self.flat_knots[self.startpole + i + self.degree]
+                       - self.flat_knots[self.startpole + i]);
+            }
+            let wslopevalue = cadora_geo::BSpline::spline_value(
+                u, k, self.degree - 1, &mut sd, &self.flat_knots,
+            );
+
+            deriv += (store.get(self.thepoint()) * wslopevalue - slopevalue)
+                * self.degree as f64;
+        }
+
+        // d(error)/d(pole_i) and d(error)/d(weight_i)
+        for i in 0..np {
+            if param == self.poleat(i) {
+                let factors_i = cadora_geo::BSpline::spline_value(
+                    u, k, self.degree,
+                    &mut {
+                        let mut d = vec![0.0; np];
+                        d[i] = 1.0;
+                        d
+                    },
+                    &self.flat_knots,
+                );
+                deriv += -(store.get(self.weightat(i)) * factors_i);
+            }
+            if param == self.weightat(i) {
+                let factors_i = cadora_geo::BSpline::spline_value(
+                    u, k, self.degree,
+                    &mut {
+                        let mut d = vec![0.0; np];
+                        d[i] = 1.0;
+                        d
+                    },
+                    &self.flat_knots,
+                );
+                deriv += (store.get(self.thepoint()) - store.get(self.poleat(i))) * factors_i;
+            }
+        }
+
+        self.scale * deriv
+    }
+
+    fn params(&self) -> &[ParamIdx] { &self.pvec }
+    fn tag(&self) -> Tag { self.tag }
+    fn is_driving(&self) -> bool { self.driving }
+}
+
+// ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
 
@@ -3655,5 +3872,77 @@ mod tests {
         // Angle between (1,0) and (1,0) should be 0
         let b = vector_angle_helper(1.0, 0.0, 1.0, 0.0);
         assert_abs_diff_eq!(b, 0.0, epsilon = 1e-12);
+    }
+
+    // ===================================================================
+    // PointOnBSpline tests
+    // ===================================================================
+
+    fn make_cubic_bezier_for_constraint() -> (ParamStore, cadora_geo::BSpline) {
+        let mut s = ParamStore::new();
+        let poles = vec![
+            Point::new(s.push(0.0), s.push(0.0)),
+            Point::new(s.push(1.0), s.push(2.0)),
+            Point::new(s.push(3.0), s.push(2.0)),
+            Point::new(s.push(4.0), s.push(0.0)),
+        ];
+        let weights: Vec<ParamIdx> = (0..4).map(|_| s.push(1.0)).collect();
+        let knots = vec![s.push(0.0), s.push(1.0)];
+        let mult = vec![4, 4];
+        let start = poles[0];
+        let end = poles[3];
+        let mut bsp = cadora_geo::BSpline {
+            start, end, poles, weights, knots, mult,
+            degree: 3, periodic: false, flat_knots: vec![],
+        };
+        bsp.setup_flat_knots(&s);
+        (s, bsp)
+    }
+
+    #[test]
+    fn point_on_bspline_satisfied() {
+        let (mut s, bsp) = make_cubic_bezier_for_constraint();
+        let u_param = s.push(0.5);
+        // Evaluate the curve at u=0.5 to get the x-coordinate
+        let v = <cadora_geo::BSpline as cadora_geo::Curve>::value(&bsp, &s, 0.5, 0.0, None);
+        let point_x = s.push(v.x);
+        let poles_x: Vec<ParamIdx> = bsp.poles.iter().map(|p| p.x).collect();
+        let c = ConstraintPointOnBSpline::new(
+            point_x, u_param, &poles_x, &bsp.weights, &bsp, &s, 0, true,
+        );
+        assert_abs_diff_eq!(c.error(&s), 0.0, epsilon = 1e-12);
+    }
+
+    #[test]
+    fn point_on_bspline_error_nonzero() {
+        let (mut s, bsp) = make_cubic_bezier_for_constraint();
+        let u_param = s.push(0.5);
+        let point_x = s.push(999.0); // way off the curve
+        let poles_x: Vec<ParamIdx> = bsp.poles.iter().map(|p| p.x).collect();
+        let c = ConstraintPointOnBSpline::new(
+            point_x, u_param, &poles_x, &bsp.weights, &bsp, &s, 0, true,
+        );
+        assert!(c.error(&s).abs() > 1.0);
+    }
+
+    #[test]
+    fn point_on_bspline_gradient_fd() {
+        let (mut s, bsp) = make_cubic_bezier_for_constraint();
+        let u_param = s.push(0.3);
+        let point_x = s.push(1.5); // off-curve so there's nonzero error/grad
+        let poles_x: Vec<ParamIdx> = bsp.poles.iter().map(|p| p.x).collect();
+        let c = ConstraintPointOnBSpline::new(
+            point_x, u_param, &poles_x, &bsp.weights, &bsp, &s, 0, true,
+        );
+        for &param in c.params() {
+            let g = c.grad(&s, param);
+            let e0 = c.error(&s);
+            let orig = s.get(param);
+            let eps = 1e-7;
+            s.set(param, orig + eps);
+            let e1 = c.error(&s);
+            s.set(param, orig);
+            assert_abs_diff_eq!(g, (e1 - e0) / eps, epsilon = 1e-4,);
+        }
     }
 }

@@ -255,7 +255,7 @@ fn re_solve_after_constraint_change() {
     let (p, params) = mk_point(&mut store, 1.0, 1.0);
     let d1 = store.push(3.0);
     let d2 = store.push(4.0);
-    let z = store.push(0.0);
+    let _z = store.push(0.0);
 
     let mut sys = System::new(store, SolverConfig::default());
     sys.declare_unknowns(params.clone());

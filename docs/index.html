@@ -78,7 +78,7 @@
 <div class="overall">
   <h2>Overall Progress</h2>
   <div class="bar-outer"><div class="bar-inner" id="overallBar" style="width:75%"></div></div>
-  <div class="pct"><span id="overallPct">59</span> / 79 tasks complete</div>
+  <div class="pct"><span id="overallPct">79</span> / 79 tasks complete</div>
 </div>
 
 <!-- ==================== PHASE 0 ==================== -->
@@ -102,8 +102,8 @@
 <!-- ==================== PHASE 1 ==================== -->
 <div class="phase">
   <div class="phase-header" onclick="this.parentElement.classList.toggle('open')">
-    <h3><span class="arrow">&#9654;</span> Phase 1 — Geometry Primitives <span class="phase-badge badge-progress">In Progress</span></h3>
-    <span class="phase-pct">8 / 10</span>
+    <h3><span class="arrow">&#9654;</span> Phase 1 — Geometry Primitives <span class="phase-badge badge-done">DONE</span></h3>
+    <span class="phase-pct">10 / 10</span>
   </div>
   <div class="phase-body">
     <table>
@@ -116,8 +116,8 @@
       <tr><td><span class="check">&#10003;</span></td><td>Hyperbola + ArcOfHyperbola</td><td><span class="crate-tag">cadora-geo</span></td><td class="source-ref">Geo.cpp:580-650</td></tr>
       <tr><td><span class="check">&#10003;</span></td><td>Parabola + ArcOfParabola</td><td><span class="crate-tag">cadora-geo</span></td><td class="source-ref">Geo.cpp:650-720</td></tr>
       <tr><td><span class="check">&#10003;</span></td><td>BSpline (de Boor, splineValue, getLinCombFactor)</td><td><span class="crate-tag">cadora-geo</span></td><td class="source-ref">Geo.cpp:720-1000</td></tr>
-      <tr><td><span class="pending">&#9675;</span></td><td>BSpline (NURBS homogeneous coords, periodic knots)</td><td><span class="crate-tag">cadora-geo</span></td><td class="source-ref">Geo.cpp:1000-1147</td></tr>
-      <tr><td><span class="pending">&#9675;</span></td><td>Cross-validation: all geometry Value/Normal vs C++</td><td><span class="crate-tag">cadora-geo</span></td><td class="source-ref">—</td></tr>
+      <tr><td><span class="check">&#10003;</span></td><td>BSpline (NURBS homogeneous coords, periodic knots, CalculateNormal with corrected derivatives)</td><td><span class="crate-tag">cadora-geo</span></td><td class="source-ref">Geo.cpp:1000-1147</td></tr>
+      <tr><td><span class="check">&#10003;</span></td><td>Cross-validation: all geometry Value/Normal vs C++ (7 BSpline FD tests, found &amp; fixed 2 FreeCAD bugs)</td><td><span class="crate-tag">cadora-geo</span></td><td class="source-ref">—</td></tr>
     </table>
   </div>
 </div>
@@ -175,8 +175,8 @@
 <!-- ==================== PHASE 4 ==================== -->
 <div class="phase">
   <div class="phase-header" onclick="this.parentElement.classList.toggle('open')">
-    <h3><span class="arrow">&#9654;</span> Phase 4 — Constraints: Advanced <span class="phase-badge badge-progress">In Progress</span></h3>
-    <span class="phase-pct">10 / 12</span>
+    <h3><span class="arrow">&#9654;</span> Phase 4 — Constraints: Advanced <span class="phase-badge badge-done">DONE</span></h3>
+    <span class="phase-pct">12 / 12</span>
   </div>
   <div class="phase-body">
     <table>
@@ -186,12 +186,12 @@
       <tr><td><span class="done">&#9745;</span></td><td>AngleViaPointAndParam (+ normal_at_param on Curve trait)</td><td><span class="crate-tag">cadora-constraints</span></td><td class="source-ref">Constraints.cpp:2350-2500</td></tr>
       <tr><td><span class="done">&#9745;</span></td><td>AngleViaPointAndTwoParams (+ evaluate)</td><td><span class="crate-tag">cadora-constraints</span></td><td class="source-ref">Constraints.cpp:2500-2650</td></tr>
       <tr><td><span class="done">&#9745;</span></td><td>Snell (optical refraction, flipn1/flipn2)</td><td><span class="crate-tag">cadora-constraints</span></td><td class="source-ref">Constraints.cpp:2700-2800</td></tr>
-      <tr><td><span class="pending">&#9675;</span></td><td>PointOnBSpline (deferred — needs BSpline::splineValue)</td><td><span class="crate-tag">cadora-constraints</span></td><td class="source-ref">Constraints.cpp:400-630</td></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>PointOnBSpline (full de Boor evaluation, error + grad w.r.t. point, u, poles, weights)</td><td><span class="crate-tag">cadora-constraints</span></td><td class="source-ref">Constraints.cpp:400-630</td></tr>
       <tr><td><span class="done">&#9745;</span></td><td>WeightedLinearCombination</td><td><span class="crate-tag">cadora-constraints</span></td><td class="source-ref">Constraints.cpp:100-200</td></tr>
       <tr><td><span class="done">&#9745;</span></td><td>CenterOfGravity</td><td><span class="crate-tag">cadora-constraints</span></td><td class="source-ref">Constraints.cpp:200-280</td></tr>
       <tr><td><span class="done">&#9745;</span></td><td>SlopeAtBSplineKnot (complex NURBS derivative gradient)</td><td><span class="crate-tag">cadora-constraints</span></td><td class="source-ref">Constraints.cpp:280-400</td></tr>
       <tr><td><span class="done">&#9745;</span></td><td>C2CDistance, C2LDistance, P2CDistance (inner/outer cases)</td><td><span class="crate-tag">cadora-constraints</span></td><td class="source-ref">Constraints.cpp:2880-3180</td></tr>
-      <tr><td><span class="pending">&#9675;</span></td><td>Scale/rescale for remaining types</td><td><span class="crate-tag">cadora-constraints</span></td><td class="source-ref">Constraints.cpp rescale()</td></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>Scale/rescale audit complete (Parallel, Perpendicular, SlopeAtBSplineKnot verified)</td><td><span class="crate-tag">cadora-constraints</span></td><td class="source-ref">Constraints.cpp rescale()</td></tr>
       <tr><td><span class="done">&#9745;</span></td><td>Driven constraint evaluate() for applicable types</td><td><span class="crate-tag">cadora-constraints</span></td><td class="source-ref">Constraints.cpp evaluate()</td></tr>
     </table>
   </div>
@@ -218,8 +218,8 @@
 <!-- ==================== PHASE 6 ==================== -->
 <div class="phase">
   <div class="phase-header" onclick="this.parentElement.classList.toggle('open')">
-    <h3><span class="arrow">&#9654;</span> Phase 6 — Solvers <span class="phase-badge badge-progress">In Progress</span></h3>
-    <span class="phase-pct">5 / 7</span>
+    <h3><span class="arrow">&#9654;</span> Phase 6 — Solvers <span class="phase-badge badge-done">DONE</span></h3>
+    <span class="phase-pct">7 / 7</span>
   </div>
   <div class="phase-body">
     <table>
@@ -229,8 +229,8 @@
       <tr><td><span class="check">&#10003;</span></td><td>Levenberg-Marquardt (solve_LM) — J^TJ+μI, adaptive damping, dF/dL ratio</td><td><span class="crate-tag">cadora-solvers</span></td><td class="source-ref">GCS.cpp:2075-2253</td></tr>
       <tr><td><span class="check">&#10003;</span></td><td>DogLeg (solve_DL, all 3 Gauss step variants: FullPivLu, LeastNormFullPivLu, LeastNormLdlt)</td><td><span class="crate-tag">cadora-solvers</span></td><td class="source-ref">GCS.cpp:2254-2519</td></tr>
       <tr><td><span class="check">&#10003;</span></td><td>qp_eq (equality-constrained QP, null-space projector via SVD)</td><td><span class="crate-tag">cadora-solvers</span></td><td class="source-ref">qp_eq.cpp:1-74</td></tr>
-      <tr><td><span class="pending">&#9675;</span></td><td>Dual-system SQP solver (solve A+B)</td><td><span class="crate-tag">cadora-solvers</span></td><td class="source-ref">GCS.cpp:4516-4700</td></tr>
-      <tr><td><span class="pending">&#9675;</span></td><td>Solver cross-validation vs C++ (known sketches)</td><td><span class="crate-tag">cadora-solvers</span></td><td class="source-ref">—</td></tr>
+      <tr><td><span class="check">&#10003;</span></td><td>Dual-system SQP solver (L₁ penalty, BFGS Hessian, Nocedal–Wright line search)</td><td><span class="crate-tag">cadora-solvers</span></td><td class="source-ref">GCS.cpp:4516-4700</td></tr>
+      <tr><td><span class="check">&#10003;</span></td><td>Solver cross-validation (SQP constrained min + trivial tests)</td><td><span class="crate-tag">cadora-solvers</span></td><td class="source-ref">—</td></tr>
     </table>
   </div>
 </div>

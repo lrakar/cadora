@@ -309,6 +309,65 @@ impl SubSystem {
         1e10
     }
 
+    // -----------------------------------------------------------------------
+    // External param list methods (for dual-system SQP solver)
+    //
+    // These operate with a caller-provided parameter list (e.g. the union
+    // of two subsystem param lists) instead of the internal param_list.
+    // -----------------------------------------------------------------------
+
+    /// Read working store values for an external param list.
+    pub fn get_params_ext(&self, ext_params: &[ParamIdx]) -> Vec<f64> {
+        ext_params.iter().map(|&p| self.store.get(p)).collect()
+    }
+
+    /// Write values for an external param list into the working store.
+    /// Also updates any merged params that share a slot.
+    pub fn set_params_ext(&mut self, ext_params: &[ParamIdx], vals: &[f64]) {
+        assert_eq!(ext_params.len(), vals.len());
+        for (i, &p) in ext_params.iter().enumerate() {
+            self.store.set(p, vals[i]);
+            // Also sync any slot members if this param is in our idx_map
+            if let Some(&slot) = self.idx_map.get(&p) {
+                for &member in &self.slot_members[slot] {
+                    self.store.set(member, vals[i]);
+                }
+            }
+        }
+    }
+
+    /// Compute Jacobian w.r.t. an external param list.
+    /// Returns a flat row-major buffer of size `c_size() × ext_params.len()`.
+    pub fn calc_jacobi_ext(&self, ext_params: &[ParamIdx]) -> Vec<f64> {
+        let csize = self.constraints.len();
+        let psize = ext_params.len();
+        let mut j = vec![0.0; csize * psize];
+        for (col, &p) in ext_params.iter().enumerate() {
+            for row in 0..csize {
+                j[row * psize + col] += self.constraints[row].grad(&self.store, p);
+            }
+        }
+        j
+    }
+
+    /// Compute gradient w.r.t. an external param list.
+    pub fn calc_grad_ext(&self, ext_params: &[ParamIdx]) -> Vec<f64> {
+        let psize = ext_params.len();
+        let mut grad = vec![0.0; psize];
+        for (j, &p) in ext_params.iter().enumerate() {
+            for c in &self.constraints {
+                grad[j] += c.error(&self.store) * c.grad(&self.store, p);
+            }
+        }
+        grad
+    }
+
+    /// Maximum step along direction for an external param list.
+    pub fn max_step_ext(&self, ext_params: &[ParamIdx], xdir: &[f64]) -> f64 {
+        let _ = (ext_params, xdir);
+        1e10
+    }
+
     /// Consume the subsystem and return its owned constraints.
     pub fn into_constraints(self) -> Vec<Box<dyn Constraint>> {
         self.constraints
