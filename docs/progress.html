@@ -84,8 +84,8 @@
 <!-- ==================== PHASE 0 ==================== -->
 <div class="phase open">
   <div class="phase-header" onclick="this.parentElement.classList.toggle('open')">
-    <h3><span class="arrow">&#9654;</span> Phase 0 — Foundation <span class="phase-badge badge-progress">In Progress</span></h3>
-    <span class="phase-pct">3 / 5</span>
+    <h3><span class="arrow">&#9654;</span> Phase 0 — Foundation <span class="phase-badge badge-done">Done</span></h3>
+    <span class="phase-pct">5 / 5</span>
   </div>
   <div class="phase-body">
     <table>
@@ -93,8 +93,8 @@
       <tr><td><span class="check">&#10003;</span></td><td>Workspace setup (Cargo.toml, CI, .gitignore)</td><td><span class="crate-tag">workspace</span></td><td class="source-ref">—</td></tr>
       <tr><td><span class="check">&#10003;</span></td><td>ParamStore + ParamIdx + Point core types</td><td><span class="crate-tag">cadora-core</span></td><td class="source-ref">Util.h, GCS.h Point</td></tr>
       <tr><td><span class="check">&#10003;</span></td><td>DeriVector2 (forward-mode AD) + all operators</td><td><span class="crate-tag">cadora-math</span></td><td class="source-ref">Geo.cpp:1-120</td></tr>
-      <tr><td><span class="pending">&#9675;</span></td><td>SolverConfig, enums, Tag types</td><td><span class="crate-tag">cadora-core</span></td><td class="source-ref">GCS.h enums, constructor defaults</td></tr>
-      <tr><td><span class="pending">&#9675;</span></td><td>DeriVector2 cross-validation vs C++ (finite-diff)</td><td><span class="crate-tag">cadora-math</span></td><td class="source-ref">DEBUG_DERIVS validation</td></tr>
+      <tr><td><span class="check">&#10003;</span></td><td>SolverConfig, enums, Tag types (incl. redundant params, constants)</td><td><span class="crate-tag">cadora-core</span></td><td class="source-ref">GCS.h enums, constructor defaults</td></tr>
+      <tr><td><span class="check">&#10003;</span></td><td>DeriVector2 cross-validation vs C++ (7 finite-diff tests: length, dot, cross_z, normalized, mul_scalar, scale, lin_combi)</td><td><span class="crate-tag">cadora-math</span></td><td class="source-ref">DEBUG_DERIVS validation</td></tr>
     </table>
   </div>
 </div>

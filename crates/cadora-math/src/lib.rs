@@ -187,6 +187,28 @@ impl DeriVector2 {
     pub fn length_sq(&self) -> (f64, f64) {
         self.dot(self)
     }
+
+    /// Multiply by a constant (no derivative on the multiplier).
+    /// Equivalent to C++ `DeriVector2::mult(double val)`.
+    pub fn scale(&self, val: f64) -> Self {
+        Self {
+            x: self.x * val,
+            dx: self.dx * val,
+            y: self.y * val,
+            dy: self.dy * val,
+        }
+    }
+
+    /// Linear combination: `self * m1 + v2 * m2` (constant multipliers).
+    /// Equivalent to C++ `DeriVector2::linCombi(m1, v2, m2)`.
+    pub fn lin_combi(&self, m1: f64, other: &Self, m2: f64) -> Self {
+        Self {
+            x: self.x * m1 + other.x * m2,
+            dx: self.dx * m1 + other.dx * m2,
+            y: self.y * m1 + other.y * m2,
+            dy: self.dy * m1 + other.dy * m2,
+        }
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -370,5 +392,105 @@ mod tests {
         let dval_fd = (val_plus - val) / eps;
 
         assert_abs_diff_eq!(dval_analytical, dval_fd, epsilon = 1e-6);
+    }
+
+    #[test]
+    fn gradient_cross_validation_cross_z() {
+        let mut store = ParamStore::new();
+        let p1 = Point::new(store.push(2.0), store.push(3.0));
+        let p2 = Point::new(store.push(5.0), store.push(7.0));
+
+        // Analytical d(p1×p2)/d(p1.y)
+        let v1 = DeriVector2::from_point(&store, p1, Some(p1.y));
+        let v2 = DeriVector2::from_point(&store, p2, Some(p1.y));
+        let (val, dval_analytical) = v1.cross_z(&v2);
+
+        let eps = 1e-8;
+        store.set(p1.y, 3.0 + eps);
+        let v1p = DeriVector2::from_point(&store, p1, None);
+        let v2p = DeriVector2::from_point(&store, p2, None);
+        let (val_plus, _) = v1p.dot(&v2p); // intentionally dot — we compute cross below
+        let _ = val_plus;
+        let (cross_plus, _) = v1p.cross_z(&v2p);
+        let dval_fd = (cross_plus - val) / eps;
+
+        assert_abs_diff_eq!(dval_analytical, dval_fd, epsilon = 1e-6);
+    }
+
+    #[test]
+    fn gradient_cross_validation_normalized() {
+        // Test d(norm(v).x)/d(p.x) and d(norm(v).y)/d(p.x)
+        let mut store = ParamStore::new();
+        let p = Point::new(store.push(3.0), store.push(4.0));
+
+        let v = DeriVector2::from_point(&store, p, Some(p.x));
+        let n = v.normalized();
+        let nx_analytical = n.dx;
+        let ny_analytical = n.dy;
+
+        let eps = 1e-8;
+        store.set(p.x, 3.0 + eps);
+        let vp = DeriVector2::from_point(&store, p, None);
+        let np = vp.normalized();
+        let nx_fd = (np.x - n.x) / eps;
+        let ny_fd = (np.y - n.y) / eps;
+
+        assert_abs_diff_eq!(nx_analytical, nx_fd, epsilon = 1e-6);
+        assert_abs_diff_eq!(ny_analytical, ny_fd, epsilon = 1e-6);
+    }
+
+    #[test]
+    fn gradient_cross_validation_mul_scalar() {
+        // f(t) = v * t where v = (3,4) and t is a parameter
+        let mut store = ParamStore::new();
+        let p = Point::new(store.push(3.0), store.push(4.0));
+        let t_idx = store.push(2.5);
+
+        // d/dt of (v * t)
+        let v = DeriVector2::from_point(&store, p, Some(t_idx));
+        let (t, dt) = DeriVector2::from_scalar(&store, t_idx, Some(t_idx));
+        let result = v.mul_scalar(t, dt);
+
+        let eps = 1e-8;
+        store.set(t_idx, 2.5 + eps);
+        let vp = DeriVector2::from_point(&store, p, None);
+        let (tp, _) = DeriVector2::from_scalar(&store, t_idx, None);
+        let result_plus = vp.mul_scalar(tp, 0.0);
+
+        let dx_fd = (result_plus.x - result.x) / eps;
+        let dy_fd = (result_plus.y - result.y) / eps;
+
+        assert_abs_diff_eq!(result.dx, dx_fd, epsilon = 1e-6);
+        assert_abs_diff_eq!(result.dy, dy_fd, epsilon = 1e-6);
+    }
+
+    #[test]
+    fn scale_and_lin_combi() {
+        let a = DeriVector2::new(1.0, 0.5, 2.0, 0.3);
+        let b = DeriVector2::new(3.0, 0.1, 4.0, 0.2);
+
+        // scale(2) should give same result as mul_scalar(2, 0)
+        let s = a.scale(2.0);
+        let m = a.mul_scalar(2.0, 0.0);
+        assert_abs_diff_eq!(s.x, m.x, epsilon = 1e-15);
+        assert_abs_diff_eq!(s.dx, m.dx, epsilon = 1e-15);
+        assert_abs_diff_eq!(s.y, m.y, epsilon = 1e-15);
+        assert_abs_diff_eq!(s.dy, m.dy, epsilon = 1e-15);
+
+        // lin_combi: a*3 + b*(-2)
+        let lc = a.lin_combi(3.0, &b, -2.0);
+        assert_abs_diff_eq!(lc.x, 1.0 * 3.0 + 3.0 * (-2.0), epsilon = 1e-15);
+        assert_abs_diff_eq!(lc.dx, 0.5 * 3.0 + 0.1 * (-2.0), epsilon = 1e-15);
+        assert_abs_diff_eq!(lc.y, 2.0 * 3.0 + 4.0 * (-2.0), epsilon = 1e-15);
+        assert_abs_diff_eq!(lc.dy, 0.3 * 3.0 + 0.2 * (-2.0), epsilon = 1e-15);
+    }
+
+    #[test]
+    fn length_sq_cross_validation() {
+        let v = DeriVector2::new(3.0, 1.0, 4.0, 0.0);
+        let (lsq, dlsq) = v.length_sq();
+        assert_abs_diff_eq!(lsq, 25.0, epsilon = 1e-15);
+        // d(x^2+y^2)/dp = 2*x*dx + 2*y*dy = 2*3*1 + 2*4*0 = 6
+        assert_abs_diff_eq!(dlsq, 6.0, epsilon = 1e-15);
     }
 }

@@ -204,6 +204,18 @@ impl Default for DebugMode {
 }
 
 // ---------------------------------------------------------------------------
+// Solver constants (from C++ #defines)
+// ---------------------------------------------------------------------------
+
+/// Rough convergence threshold — used for initial fast-check.
+/// C++: `#define XconvergenceRough 1e-8`
+pub const X_CONVERGENCE_ROUGH: f64 = 1e-8;
+
+/// Threshold below which a squared-error sum is considered "small".
+/// C++: `#define smallF 1e-20`
+pub const SMALL_F: f64 = 1e-20;
+
+// ---------------------------------------------------------------------------
 // Solver configuration
 // ---------------------------------------------------------------------------
 
@@ -216,16 +228,23 @@ pub struct SolverConfig {
     pub convergence: f64,
     pub convergence_redundant: f64,
     pub sketch_size_multiplier: bool,
+    pub sketch_size_multiplier_redundant: bool,
 
     // LM-specific
     pub lm_eps: f64,
     pub lm_eps1: f64,
     pub lm_tau: f64,
+    pub lm_eps_redundant: f64,
+    pub lm_eps1_redundant: f64,
+    pub lm_tau_redundant: f64,
 
     // DogLeg-specific
     pub dl_tolg: f64,
     pub dl_tolx: f64,
     pub dl_tolf: f64,
+    pub dl_tolg_redundant: f64,
+    pub dl_tolx_redundant: f64,
+    pub dl_tolf_redundant: f64,
     pub dog_leg_gauss_step: DogLegGaussStep,
 
     // QR diagnosis
@@ -246,14 +265,21 @@ impl Default for SolverConfig {
             convergence: 1e-10,
             convergence_redundant: 1e-10,
             sketch_size_multiplier: false,
+            sketch_size_multiplier_redundant: false,
 
             lm_eps: 1e-10,
             lm_eps1: 1e-50,
             lm_tau: 1e-3,
+            lm_eps_redundant: 1e-10,
+            lm_eps1_redundant: 1e-50,
+            lm_tau_redundant: 1e-3,
 
             dl_tolg: 1e-80,
             dl_tolx: 1e-80,
             dl_tolf: 1e-10,
+            dl_tolg_redundant: 1e-80,
+            dl_tolx_redundant: 1e-80,
+            dl_tolf_redundant: 1e-10,
             dog_leg_gauss_step: DogLegGaussStep::default(),
 
             qr_algorithm: QrAlgorithm::default(),
@@ -325,10 +351,27 @@ mod tests {
     fn solver_config_defaults() {
         let cfg = SolverConfig::default();
         assert_eq!(cfg.max_iter, 100);
+        assert_eq!(cfg.max_iter_redundant, 100);
         assert_eq!(cfg.convergence, 1e-10);
+        assert_eq!(cfg.convergence_redundant, 1e-10);
+        assert!(!cfg.sketch_size_multiplier);
+        assert!(!cfg.sketch_size_multiplier_redundant);
         assert_eq!(cfg.auto_qr_threshold, 1000);
         assert_eq!(cfg.qr_algorithm, QrAlgorithm::SparseQr);
         assert_eq!(cfg.debug_mode, DebugMode::Minimal);
         assert_eq!(cfg.dog_leg_gauss_step, DogLegGaussStep::FullPivLu);
+        // Redundant-specific solver params mirror normal defaults
+        assert_eq!(cfg.lm_eps_redundant, cfg.lm_eps);
+        assert_eq!(cfg.lm_eps1_redundant, cfg.lm_eps1);
+        assert_eq!(cfg.lm_tau_redundant, cfg.lm_tau);
+        assert_eq!(cfg.dl_tolg_redundant, cfg.dl_tolg);
+        assert_eq!(cfg.dl_tolx_redundant, cfg.dl_tolx);
+        assert_eq!(cfg.dl_tolf_redundant, cfg.dl_tolf);
+    }
+
+    #[test]
+    fn solver_constants() {
+        assert_eq!(X_CONVERGENCE_ROUGH, 1e-8);
+        assert_eq!(SMALL_F, 1e-20);
     }
 }
