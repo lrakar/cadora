@@ -77,15 +77,15 @@
 <!-- Overall progress -->
 <div class="overall">
   <h2>Overall Progress</h2>
-  <div class="bar-outer"><div class="bar-inner" id="overallBar" style="width:4%"></div></div>
-  <div class="pct"><span id="overallPct">3</span> / 79 tasks complete</div>
+  <div class="bar-outer"><div class="bar-inner" id="overallBar" style="width:75%"></div></div>
+  <div class="pct"><span id="overallPct">59</span> / 79 tasks complete</div>
 </div>
 
 <!-- ==================== PHASE 0 ==================== -->
 <div class="phase open">
   <div class="phase-header" onclick="this.parentElement.classList.toggle('open')">
-    <h3><span class="arrow">&#9654;</span> Phase 0 — Foundation <span class="phase-badge badge-progress">In Progress</span></h3>
-    <span class="phase-pct">3 / 5</span>
+    <h3><span class="arrow">&#9654;</span> Phase 0 — Foundation <span class="phase-badge badge-done">Done</span></h3>
+    <span class="phase-pct">5 / 5</span>
   </div>
   <div class="phase-body">
     <table>
@@ -93,8 +93,8 @@
       <tr><td><span class="check">&#10003;</span></td><td>Workspace setup (Cargo.toml, CI, .gitignore)</td><td><span class="crate-tag">workspace</span></td><td class="source-ref">—</td></tr>
       <tr><td><span class="check">&#10003;</span></td><td>ParamStore + ParamIdx + Point core types</td><td><span class="crate-tag">cadora-core</span></td><td class="source-ref">Util.h, GCS.h Point</td></tr>
       <tr><td><span class="check">&#10003;</span></td><td>DeriVector2 (forward-mode AD) + all operators</td><td><span class="crate-tag">cadora-math</span></td><td class="source-ref">Geo.cpp:1-120</td></tr>
-      <tr><td><span class="pending">&#9675;</span></td><td>SolverConfig, enums, Tag types</td><td><span class="crate-tag">cadora-core</span></td><td class="source-ref">GCS.h enums, constructor defaults</td></tr>
-      <tr><td><span class="pending">&#9675;</span></td><td>DeriVector2 cross-validation vs C++ (finite-diff)</td><td><span class="crate-tag">cadora-math</span></td><td class="source-ref">DEBUG_DERIVS validation</td></tr>
+      <tr><td><span class="check">&#10003;</span></td><td>SolverConfig, enums, Tag types (incl. redundant params, constants)</td><td><span class="crate-tag">cadora-core</span></td><td class="source-ref">GCS.h enums, constructor defaults</td></tr>
+      <tr><td><span class="check">&#10003;</span></td><td>DeriVector2 cross-validation vs C++ (7 finite-diff tests: length, dot, cross_z, normalized, mul_scalar, scale, lin_combi)</td><td><span class="crate-tag">cadora-math</span></td><td class="source-ref">DEBUG_DERIVS validation</td></tr>
     </table>
   </div>
 </div>
@@ -102,20 +102,20 @@
 <!-- ==================== PHASE 1 ==================== -->
 <div class="phase">
   <div class="phase-header" onclick="this.parentElement.classList.toggle('open')">
-    <h3><span class="arrow">&#9654;</span> Phase 1 — Geometry Primitives <span class="phase-badge badge-todo">Not Started</span></h3>
-    <span class="phase-pct">0 / 10</span>
+    <h3><span class="arrow">&#9654;</span> Phase 1 — Geometry Primitives <span class="phase-badge badge-progress">In Progress</span></h3>
+    <span class="phase-pct">8 / 10</span>
   </div>
   <div class="phase-body">
     <table>
       <tr><th></th><th>Task</th><th>Crate</th><th>Source Reference</th></tr>
-      <tr><td><span class="pending">&#9675;</span></td><td>Line (Value, CalculateNormal, params)</td><td><span class="crate-tag">cadora-geo</span></td><td class="source-ref">Geo.cpp:274-320</td></tr>
-      <tr><td><span class="pending">&#9675;</span></td><td>Circle (Value, CalculateNormal)</td><td><span class="crate-tag">cadora-geo</span></td><td class="source-ref">Geo.cpp:321-380</td></tr>
-      <tr><td><span class="pending">&#9675;</span></td><td>Arc (PushOwnParams, start/end angle logic)</td><td><span class="crate-tag">cadora-geo</span></td><td class="source-ref">Geo.cpp:381-440</td></tr>
-      <tr><td><span class="pending">&#9675;</span></td><td>Ellipse (Value, CalculateNormal, getRadMaj)</td><td><span class="crate-tag">cadora-geo</span></td><td class="source-ref">Geo.cpp:441-540</td></tr>
-      <tr><td><span class="pending">&#9675;</span></td><td>ArcOfEllipse</td><td><span class="crate-tag">cadora-geo</span></td><td class="source-ref">Geo.cpp:540-580</td></tr>
-      <tr><td><span class="pending">&#9675;</span></td><td>Hyperbola + ArcOfHyperbola</td><td><span class="crate-tag">cadora-geo</span></td><td class="source-ref">Geo.cpp:580-650</td></tr>
-      <tr><td><span class="pending">&#9675;</span></td><td>Parabola + ArcOfParabola</td><td><span class="crate-tag">cadora-geo</span></td><td class="source-ref">Geo.cpp:650-720</td></tr>
-      <tr><td><span class="pending">&#9675;</span></td><td>BSpline (de Boor, splineValue, getLinCombFactor)</td><td><span class="crate-tag">cadora-geo</span></td><td class="source-ref">Geo.cpp:720-1000</td></tr>
+      <tr><td><span class="check">&#10003;</span></td><td>Line (Value, CalculateNormal, params)</td><td><span class="crate-tag">cadora-geo</span></td><td class="source-ref">Geo.cpp:274-320</td></tr>
+      <tr><td><span class="check">&#10003;</span></td><td>Circle (Value, CalculateNormal)</td><td><span class="crate-tag">cadora-geo</span></td><td class="source-ref">Geo.cpp:321-380</td></tr>
+      <tr><td><span class="check">&#10003;</span></td><td>Arc (PushOwnParams, start/end angle logic)</td><td><span class="crate-tag">cadora-geo</span></td><td class="source-ref">Geo.cpp:381-440</td></tr>
+      <tr><td><span class="check">&#10003;</span></td><td>Ellipse (Value, CalculateNormal, getRadMaj)</td><td><span class="crate-tag">cadora-geo</span></td><td class="source-ref">Geo.cpp:441-540</td></tr>
+      <tr><td><span class="check">&#10003;</span></td><td>ArcOfEllipse</td><td><span class="crate-tag">cadora-geo</span></td><td class="source-ref">Geo.cpp:540-580</td></tr>
+      <tr><td><span class="check">&#10003;</span></td><td>Hyperbola + ArcOfHyperbola</td><td><span class="crate-tag">cadora-geo</span></td><td class="source-ref">Geo.cpp:580-650</td></tr>
+      <tr><td><span class="check">&#10003;</span></td><td>Parabola + ArcOfParabola</td><td><span class="crate-tag">cadora-geo</span></td><td class="source-ref">Geo.cpp:650-720</td></tr>
+      <tr><td><span class="check">&#10003;</span></td><td>BSpline (de Boor, splineValue, getLinCombFactor)</td><td><span class="crate-tag">cadora-geo</span></td><td class="source-ref">Geo.cpp:720-1000</td></tr>
       <tr><td><span class="pending">&#9675;</span></td><td>BSpline (NURBS homogeneous coords, periodic knots)</td><td><span class="crate-tag">cadora-geo</span></td><td class="source-ref">Geo.cpp:1000-1147</td></tr>
       <tr><td><span class="pending">&#9675;</span></td><td>Cross-validation: all geometry Value/Normal vs C++</td><td><span class="crate-tag">cadora-geo</span></td><td class="source-ref">—</td></tr>
     </table>
@@ -125,24 +125,24 @@
 <!-- ==================== PHASE 2 ==================== -->
 <div class="phase">
   <div class="phase-header" onclick="this.parentElement.classList.toggle('open')">
-    <h3><span class="arrow">&#9654;</span> Phase 2 — Constraints: Simple <span class="phase-badge badge-todo">Not Started</span></h3>
-    <span class="phase-pct">0 / 12</span>
+    <h3><span class="arrow">&#9654;</span> Phase 2 — Constraints: Simple <span class="phase-badge badge-done">DONE</span></h3>
+    <span class="phase-pct">12 / 12</span>
   </div>
   <div class="phase-body">
     <table>
       <tr><th></th><th>Task</th><th>Crate</th><th>Source Reference</th></tr>
-      <tr><td><span class="pending">&#9675;</span></td><td>Constraint trait + base infrastructure</td><td><span class="crate-tag">cadora-constraints</span></td><td class="source-ref">Constraints.h base class</td></tr>
-      <tr><td><span class="pending">&#9675;</span></td><td>Equal (with ratio)</td><td><span class="crate-tag">cadora-constraints</span></td><td class="source-ref">Constraints.cpp:60-100</td></tr>
-      <tr><td><span class="pending">&#9675;</span></td><td>Difference</td><td><span class="crate-tag">cadora-constraints</span></td><td class="source-ref">Constraints.cpp:630-670</td></tr>
-      <tr><td><span class="pending">&#9675;</span></td><td>P2PDistance</td><td><span class="crate-tag">cadora-constraints</span></td><td class="source-ref">Constraints.cpp:680-750</td></tr>
-      <tr><td><span class="pending">&#9675;</span></td><td>P2PAngle</td><td><span class="crate-tag">cadora-constraints</span></td><td class="source-ref">Constraints.cpp:750-820</td></tr>
-      <tr><td><span class="pending">&#9675;</span></td><td>P2LDistance</td><td><span class="crate-tag">cadora-constraints</span></td><td class="source-ref">Constraints.cpp:820-900</td></tr>
-      <tr><td><span class="pending">&#9675;</span></td><td>PointOnLine</td><td><span class="crate-tag">cadora-constraints</span></td><td class="source-ref">Constraints.cpp:900-950</td></tr>
-      <tr><td><span class="pending">&#9675;</span></td><td>PointOnPerpBisector</td><td><span class="crate-tag">cadora-constraints</span></td><td class="source-ref">Constraints.cpp:950-1020</td></tr>
-      <tr><td><span class="pending">&#9675;</span></td><td>Parallel</td><td><span class="crate-tag">cadora-constraints</span></td><td class="source-ref">Constraints.cpp:1020-1070</td></tr>
-      <tr><td><span class="pending">&#9675;</span></td><td>Perpendicular</td><td><span class="crate-tag">cadora-constraints</span></td><td class="source-ref">Constraints.cpp:1200-1250</td></tr>
-      <tr><td><span class="pending">&#9675;</span></td><td>L2LAngle</td><td><span class="crate-tag">cadora-constraints</span></td><td class="source-ref">Constraints.cpp:1250-1330</td></tr>
-      <tr><td><span class="pending">&#9675;</span></td><td>MidpointOnLine</td><td><span class="crate-tag">cadora-constraints</span></td><td class="source-ref">Constraints.cpp:1330-1380</td></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>Constraint trait + base infrastructure</td><td><span class="crate-tag">cadora-constraints</span></td><td class="source-ref">Constraints.h base class</td></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>Equal (with ratio)</td><td><span class="crate-tag">cadora-constraints</span></td><td class="source-ref">Constraints.cpp:60-100</td></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>Difference</td><td><span class="crate-tag">cadora-constraints</span></td><td class="source-ref">Constraints.cpp:630-670</td></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>P2PDistance</td><td><span class="crate-tag">cadora-constraints</span></td><td class="source-ref">Constraints.cpp:680-750</td></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>P2PAngle</td><td><span class="crate-tag">cadora-constraints</span></td><td class="source-ref">Constraints.cpp:750-820</td></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>P2LDistance</td><td><span class="crate-tag">cadora-constraints</span></td><td class="source-ref">Constraints.cpp:820-900</td></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>PointOnLine</td><td><span class="crate-tag">cadora-constraints</span></td><td class="source-ref">Constraints.cpp:900-950</td></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>PointOnPerpBisector</td><td><span class="crate-tag">cadora-constraints</span></td><td class="source-ref">Constraints.cpp:950-1020</td></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>Parallel</td><td><span class="crate-tag">cadora-constraints</span></td><td class="source-ref">Constraints.cpp:1020-1070</td></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>Perpendicular</td><td><span class="crate-tag">cadora-constraints</span></td><td class="source-ref">Constraints.cpp:1200-1250</td></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>L2LAngle</td><td><span class="crate-tag">cadora-constraints</span></td><td class="source-ref">Constraints.cpp:1250-1330</td></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>MidpointOnLine</td><td><span class="crate-tag">cadora-constraints</span></td><td class="source-ref">Constraints.cpp:1330-1380</td></tr>
     </table>
   </div>
 </div>
@@ -150,24 +150,24 @@
 <!-- ==================== PHASE 3 ==================== -->
 <div class="phase">
   <div class="phase-header" onclick="this.parentElement.classList.toggle('open')">
-    <h3><span class="arrow">&#9654;</span> Phase 3 — Constraints: Geometric <span class="phase-badge badge-todo">Not Started</span></h3>
-    <span class="phase-pct">0 / 12</span>
+    <h3><span class="arrow">&#9654;</span> Phase 3 — Constraints: Geometric <span class="phase-badge badge-done">DONE</span></h3>
+    <span class="phase-pct">12 / 12</span>
   </div>
   <div class="phase-body">
     <table>
       <tr><th></th><th>Task</th><th>Crate</th><th>Source Reference</th></tr>
-      <tr><td><span class="pending">&#9675;</span></td><td>TangentCircumf (with singularity guard at d²&lt;1e-14)</td><td><span class="crate-tag">cadora-constraints</span></td><td class="source-ref">Constraints.cpp:1380-1460</td></tr>
-      <tr><td><span class="pending">&#9675;</span></td><td>PointOnEllipse (focal distance formula)</td><td><span class="crate-tag">cadora-constraints</span></td><td class="source-ref">Constraints.cpp:1460-1520</td></tr>
-      <tr><td><span class="pending">&#9675;</span></td><td>PointOnHyperbola</td><td><span class="crate-tag">cadora-constraints</span></td><td class="source-ref">Constraints.cpp:1920-1980</td></tr>
-      <tr><td><span class="pending">&#9675;</span></td><td>PointOnParabola</td><td><span class="crate-tag">cadora-constraints</span></td><td class="source-ref">Constraints.cpp:1980-2060</td></tr>
-      <tr><td><span class="pending">&#9675;</span></td><td>EllipseTangentLine (mirror-of-focus algorithm)</td><td><span class="crate-tag">cadora-constraints</span></td><td class="source-ref">Constraints.cpp:1520-1600</td></tr>
-      <tr><td><span class="pending">&#9675;</span></td><td>InternalAlignmentPoint2Ellipse</td><td><span class="crate-tag">cadora-constraints</span></td><td class="source-ref">Constraints.cpp:1600-1700</td></tr>
-      <tr><td><span class="pending">&#9675;</span></td><td>InternalAlignmentPoint2Hyperbola</td><td><span class="crate-tag">cadora-constraints</span></td><td class="source-ref">Constraints.cpp:1900-1920</td></tr>
-      <tr><td><span class="pending">&#9675;</span></td><td>EqualMajorAxesConic</td><td><span class="crate-tag">cadora-constraints</span></td><td class="source-ref">Constraints.cpp:1920-1950</td></tr>
-      <tr><td><span class="pending">&#9675;</span></td><td>EqualFocalDistance</td><td><span class="crate-tag">cadora-constraints</span></td><td class="source-ref">Constraints.cpp:1950-1980</td></tr>
-      <tr><td><span class="pending">&#9675;</span></td><td>CurveValue</td><td><span class="crate-tag">cadora-constraints</span></td><td class="source-ref">Constraints.cpp:2000-2060</td></tr>
-      <tr><td><span class="pending">&#9675;</span></td><td>ArcLength</td><td><span class="crate-tag">cadora-constraints</span></td><td class="source-ref">Constraints.cpp:3180-3218</td></tr>
-      <tr><td><span class="pending">&#9675;</span></td><td>EqualLineLength (with surrogate gradient ±1e-10)</td><td><span class="crate-tag">cadora-constraints</span></td><td class="source-ref">Constraints.cpp:2800-2880</td></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>TangentCircumf (with singularity guard at d²&lt;1e-14)</td><td><span class="crate-tag">cadora-constraints</span></td><td class="source-ref">Constraints.cpp:1380-1460</td></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>PointOnEllipse (focal distance formula)</td><td><span class="crate-tag">cadora-constraints</span></td><td class="source-ref">Constraints.cpp:1460-1520</td></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>PointOnHyperbola</td><td><span class="crate-tag">cadora-constraints</span></td><td class="source-ref">Constraints.cpp:1920-1980</td></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>PointOnParabola</td><td><span class="crate-tag">cadora-constraints</span></td><td class="source-ref">Constraints.cpp:1980-2060</td></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>EllipseTangentLine (mirror-of-focus algorithm)</td><td><span class="crate-tag">cadora-constraints</span></td><td class="source-ref">Constraints.cpp:1520-1600</td></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>InternalAlignmentPoint2Ellipse</td><td><span class="crate-tag">cadora-constraints</span></td><td class="source-ref">Constraints.cpp:1600-1700</td></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>InternalAlignmentPoint2Hyperbola</td><td><span class="crate-tag">cadora-constraints</span></td><td class="source-ref">Constraints.cpp:1900-1920</td></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>EqualMajorAxesConic</td><td><span class="crate-tag">cadora-constraints</span></td><td class="source-ref">Constraints.cpp:1920-1950</td></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>EqualFocalDistance</td><td><span class="crate-tag">cadora-constraints</span></td><td class="source-ref">Constraints.cpp:1950-1980</td></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>CurveValue</td><td><span class="crate-tag">cadora-constraints</span></td><td class="source-ref">Constraints.cpp:2000-2060</td></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>ArcLength</td><td><span class="crate-tag">cadora-constraints</span></td><td class="source-ref">Constraints.cpp:3180-3218</td></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>EqualLineLength (with surrogate gradient ±1e-10)</td><td><span class="crate-tag">cadora-constraints</span></td><td class="source-ref">Constraints.cpp:2800-2880</td></tr>
     </table>
   </div>
 </div>
@@ -175,24 +175,24 @@
 <!-- ==================== PHASE 4 ==================== -->
 <div class="phase">
   <div class="phase-header" onclick="this.parentElement.classList.toggle('open')">
-    <h3><span class="arrow">&#9654;</span> Phase 4 — Constraints: Advanced <span class="phase-badge badge-todo">Not Started</span></h3>
-    <span class="phase-pct">0 / 12</span>
+    <h3><span class="arrow">&#9654;</span> Phase 4 — Constraints: Advanced <span class="phase-badge badge-progress">In Progress</span></h3>
+    <span class="phase-pct">10 / 12</span>
   </div>
   <div class="phase-body">
     <table>
       <tr><th></th><th>Task</th><th>Crate</th><th>Source Reference</th></tr>
-      <tr><td><span class="pending">&#9675;</span></td><td>AngleViaPoint</td><td><span class="crate-tag">cadora-constraints</span></td><td class="source-ref">Constraints.cpp:2060-2200</td></tr>
-      <tr><td><span class="pending">&#9675;</span></td><td>AngleViaTwoPoints</td><td><span class="crate-tag">cadora-constraints</span></td><td class="source-ref">Constraints.cpp:2200-2350</td></tr>
-      <tr><td><span class="pending">&#9675;</span></td><td>AngleViaPointAndParam</td><td><span class="crate-tag">cadora-constraints</span></td><td class="source-ref">Constraints.cpp:2350-2500</td></tr>
-      <tr><td><span class="pending">&#9675;</span></td><td>AngleViaPointAndTwoParams</td><td><span class="crate-tag">cadora-constraints</span></td><td class="source-ref">Constraints.cpp:2500-2650</td></tr>
-      <tr><td><span class="pending">&#9675;</span></td><td>Snell (optical refraction)</td><td><span class="crate-tag">cadora-constraints</span></td><td class="source-ref">Constraints.cpp:2700-2800</td></tr>
-      <tr><td><span class="pending">&#9675;</span></td><td>PointOnBSpline (x/y split, NURBS eval)</td><td><span class="crate-tag">cadora-constraints</span></td><td class="source-ref">Constraints.cpp:400-630</td></tr>
-      <tr><td><span class="pending">&#9675;</span></td><td>WeightedLinearCombination</td><td><span class="crate-tag">cadora-constraints</span></td><td class="source-ref">Constraints.cpp:100-200</td></tr>
-      <tr><td><span class="pending">&#9675;</span></td><td>CenterOfGravity</td><td><span class="crate-tag">cadora-constraints</span></td><td class="source-ref">Constraints.cpp:200-280</td></tr>
-      <tr><td><span class="pending">&#9675;</span></td><td>SlopeAtBSplineKnot</td><td><span class="crate-tag">cadora-constraints</span></td><td class="source-ref">Constraints.cpp:280-400</td></tr>
-      <tr><td><span class="pending">&#9675;</span></td><td>C2CDistance, C2LDistance, P2CDistance</td><td><span class="crate-tag">cadora-constraints</span></td><td class="source-ref">Constraints.cpp:2880-3180</td></tr>
-      <tr><td><span class="pending">&#9675;</span></td><td>Scale/rescale mechanism</td><td><span class="crate-tag">cadora-constraints</span></td><td class="source-ref">Constraints.cpp rescale()</td></tr>
-      <tr><td><span class="pending">&#9675;</span></td><td>Driven constraint evaluate() for all types</td><td><span class="crate-tag">cadora-constraints</span></td><td class="source-ref">Constraints.cpp evaluate()</td></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>AngleViaPoint (+ vector_angle_helper, datan2_d)</td><td><span class="crate-tag">cadora-constraints</span></td><td class="source-ref">Constraints.cpp:2060-2200</td></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>AngleViaTwoPoints (+ evaluate)</td><td><span class="crate-tag">cadora-constraints</span></td><td class="source-ref">Constraints.cpp:2200-2350</td></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>AngleViaPointAndParam (+ normal_at_param on Curve trait)</td><td><span class="crate-tag">cadora-constraints</span></td><td class="source-ref">Constraints.cpp:2350-2500</td></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>AngleViaPointAndTwoParams (+ evaluate)</td><td><span class="crate-tag">cadora-constraints</span></td><td class="source-ref">Constraints.cpp:2500-2650</td></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>Snell (optical refraction, flipn1/flipn2)</td><td><span class="crate-tag">cadora-constraints</span></td><td class="source-ref">Constraints.cpp:2700-2800</td></tr>
+      <tr><td><span class="pending">&#9675;</span></td><td>PointOnBSpline (deferred — needs BSpline::splineValue)</td><td><span class="crate-tag">cadora-constraints</span></td><td class="source-ref">Constraints.cpp:400-630</td></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>WeightedLinearCombination</td><td><span class="crate-tag">cadora-constraints</span></td><td class="source-ref">Constraints.cpp:100-200</td></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>CenterOfGravity</td><td><span class="crate-tag">cadora-constraints</span></td><td class="source-ref">Constraints.cpp:200-280</td></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>SlopeAtBSplineKnot (complex NURBS derivative gradient)</td><td><span class="crate-tag">cadora-constraints</span></td><td class="source-ref">Constraints.cpp:280-400</td></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>C2CDistance, C2LDistance, P2CDistance (inner/outer cases)</td><td><span class="crate-tag">cadora-constraints</span></td><td class="source-ref">Constraints.cpp:2880-3180</td></tr>
+      <tr><td><span class="pending">&#9675;</span></td><td>Scale/rescale for remaining types</td><td><span class="crate-tag">cadora-constraints</span></td><td class="source-ref">Constraints.cpp rescale()</td></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>Driven constraint evaluate() for applicable types</td><td><span class="crate-tag">cadora-constraints</span></td><td class="source-ref">Constraints.cpp evaluate()</td></tr>
     </table>
   </div>
 </div>
@@ -200,17 +200,17 @@
 <!-- ==================== PHASE 5 ==================== -->
 <div class="phase">
   <div class="phase-header" onclick="this.parentElement.classList.toggle('open')">
-    <h3><span class="arrow">&#9654;</span> Phase 5 — SubSystem <span class="phase-badge badge-todo">Not Started</span></h3>
-    <span class="phase-pct">0 / 5</span>
+    <h3><span class="arrow">&#9654;</span> Phase 5 — SubSystem <span class="phase-badge badge-done">DONE</span></h3>
+    <span class="phase-pct">5 / 5</span>
   </div>
   <div class="phase-body">
     <table>
       <tr><th></th><th>Task</th><th>Crate</th><th>Source Reference</th></tr>
-      <tr><td><span class="pending">&#9675;</span></td><td>SubSystem struct (pvals, pmap, constraint list)</td><td><span class="crate-tag">cadora-subsystem</span></td><td class="source-ref">SubSystem.cpp:1-80</td></tr>
-      <tr><td><span class="pending">&#9675;</span></td><td>Parameter redirection (redirect / revert / apply)</td><td><span class="crate-tag">cadora-subsystem</span></td><td class="source-ref">SubSystem.cpp:80-180</td></tr>
-      <tr><td><span class="pending">&#9675;</span></td><td>calcJacobi (dense Jacobian evaluation)</td><td><span class="crate-tag">cadora-subsystem</span></td><td class="source-ref">SubSystem.cpp:180-250</td></tr>
-      <tr><td><span class="pending">&#9675;</span></td><td>calcGrad (p2c adjacency-based gradient)</td><td><span class="crate-tag">cadora-subsystem</span></td><td class="source-ref">SubSystem.cpp:250-310</td></tr>
-      <tr><td><span class="pending">&#9675;</span></td><td>Unit tests + cross-validation vs C++</td><td><span class="crate-tag">cadora-subsystem</span></td><td class="source-ref">—</td></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>SubSystem struct (working store, param_list, idx_map, adjacency)</td><td><span class="crate-tag">cadora-subsystem</span></td><td class="source-ref">SubSystem.cpp:1-80</td></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>Parameter isolation (sync_from, apply_solution, get/set_params)</td><td><span class="crate-tag">cadora-subsystem</span></td><td class="source-ref">SubSystem.cpp:80-180</td></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>calcJacobi (dense Jacobian) + calcResidual</td><td><span class="crate-tag">cadora-subsystem</span></td><td class="source-ref">SubSystem.cpp:180-250</td></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>calcGrad (p2c adjacency) + lineSearch</td><td><span class="crate-tag">cadora-subsystem</span></td><td class="source-ref">SubSystem.cpp:250-310, GCS.cpp lineSearch</td></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>12 unit tests (sizes, get/set, residual, jacobi, grad, J^T*r, reduction, line search)</td><td><span class="crate-tag">cadora-subsystem</span></td><td class="source-ref">—</td></tr>
     </table>
   </div>
 </div>
@@ -218,18 +218,18 @@
 <!-- ==================== PHASE 6 ==================== -->
 <div class="phase">
   <div class="phase-header" onclick="this.parentElement.classList.toggle('open')">
-    <h3><span class="arrow">&#9654;</span> Phase 6 — Solvers <span class="phase-badge badge-todo">Not Started</span></h3>
-    <span class="phase-pct">0 / 7</span>
+    <h3><span class="arrow">&#9654;</span> Phase 6 — Solvers <span class="phase-badge badge-progress">In Progress</span></h3>
+    <span class="phase-pct">5 / 7</span>
   </div>
   <div class="phase-body">
     <table>
       <tr><th></th><th>Task</th><th>Crate</th><th>Source Reference</th></tr>
-      <tr><td><span class="pending">&#9675;</span></td><td>lineSearch() — cubic bracketing free function</td><td><span class="crate-tag">cadora-solvers</span></td><td class="source-ref">GCS.cpp:5600-5700</td></tr>
-      <tr><td><span class="pending">&#9675;</span></td><td>BFGS solver (solve_BFGS)</td><td><span class="crate-tag">cadora-solvers</span></td><td class="source-ref">GCS.cpp:1948-2074</td></tr>
-      <tr><td><span class="pending">&#9675;</span></td><td>Levenberg-Marquardt (solve_LM)</td><td><span class="crate-tag">cadora-solvers</span></td><td class="source-ref">GCS.cpp:2075-2253</td></tr>
-      <tr><td><span class="pending">&#9675;</span></td><td>DogLeg (solve_DL, all 3 Gauss step variants)</td><td><span class="crate-tag">cadora-solvers</span></td><td class="source-ref">GCS.cpp:2254-2519</td></tr>
-      <tr><td><span class="pending">&#9675;</span></td><td>qp_eq (equality-constrained QP)</td><td><span class="crate-tag">cadora-solvers</span></td><td class="source-ref">qp_eq.cpp:1-74</td></tr>
-      <tr><td><span class="pending">&#9675;</span></td><td>Dual-system SQP solver (solve A+B)</td><td><span class="crate-tag">cadora-solvers</span></td><td class="source-ref">GCS.cpp:4700-4800</td></tr>
+      <tr><td><span class="check">&#10003;</span></td><td>lineSearch() — quadratic-interpolation bracketing (in cadora-subsystem)</td><td><span class="crate-tag">cadora-subsystem</span></td><td class="source-ref">GCS.cpp:5600-5700</td></tr>
+      <tr><td><span class="check">&#10003;</span></td><td>BFGS solver (solve_BFGS) — identity Hessian approx, BFGS update, convergence</td><td><span class="crate-tag">cadora-solvers</span></td><td class="source-ref">GCS.cpp:1948-2074</td></tr>
+      <tr><td><span class="check">&#10003;</span></td><td>Levenberg-Marquardt (solve_LM) — J^TJ+μI, adaptive damping, dF/dL ratio</td><td><span class="crate-tag">cadora-solvers</span></td><td class="source-ref">GCS.cpp:2075-2253</td></tr>
+      <tr><td><span class="check">&#10003;</span></td><td>DogLeg (solve_DL, all 3 Gauss step variants: FullPivLu, LeastNormFullPivLu, LeastNormLdlt)</td><td><span class="crate-tag">cadora-solvers</span></td><td class="source-ref">GCS.cpp:2254-2519</td></tr>
+      <tr><td><span class="check">&#10003;</span></td><td>qp_eq (equality-constrained QP, null-space projector via SVD)</td><td><span class="crate-tag">cadora-solvers</span></td><td class="source-ref">qp_eq.cpp:1-74</td></tr>
+      <tr><td><span class="pending">&#9675;</span></td><td>Dual-system SQP solver (solve A+B)</td><td><span class="crate-tag">cadora-solvers</span></td><td class="source-ref">GCS.cpp:4516-4700</td></tr>
       <tr><td><span class="pending">&#9675;</span></td><td>Solver cross-validation vs C++ (known sketches)</td><td><span class="crate-tag">cadora-solvers</span></td><td class="source-ref">—</td></tr>
     </table>
   </div>
@@ -238,36 +238,36 @@
 <!-- ==================== PHASE 7 ==================== -->
 <div class="phase">
   <div class="phase-header" onclick="this.parentElement.classList.toggle('open')">
-    <h3><span class="arrow">&#9654;</span> Phase 7 — Diagnosis <span class="phase-badge badge-todo">Not Started</span></h3>
-    <span class="phase-pct">0 / 6</span>
+    <h3><span class="arrow">&#9654;</span> Phase 7 — Diagnosis <span class="phase-badge badge-done">DONE</span></h3>
+    <span class="phase-pct">6 / 6</span>
   </div>
   <div class="phase-body">
     <table>
       <tr><th></th><th>Task</th><th>Crate</th><th>Source Reference</th></tr>
-      <tr><td><span class="pending">&#9675;</span></td><td>makeReducedJacobian — constraint Jacobian builder</td><td><span class="crate-tag">cadora-diagnosis</span></td><td class="source-ref">GCS.cpp diagnose()</td></tr>
-      <tr><td><span class="pending">&#9675;</span></td><td>Dense QR decomposition + rank computation</td><td><span class="crate-tag">cadora-diagnosis</span></td><td class="source-ref">GCS.cpp:5100-5200</td></tr>
-      <tr><td><span class="pending">&#9675;</span></td><td>Sparse QR decomposition + rank computation</td><td><span class="crate-tag">cadora-diagnosis</span></td><td class="source-ref">GCS.cpp:5200-5300</td></tr>
-      <tr><td><span class="pending">&#9675;</span></td><td>RREF + dependency group identification</td><td><span class="crate-tag">cadora-diagnosis</span></td><td class="source-ref">GCS.cpp eliminateNonZerosOverPivot</td></tr>
-      <tr><td><span class="pending">&#9675;</span></td><td>Conflict/redundancy detection (popularity contest)</td><td><span class="crate-tag">cadora-diagnosis</span></td><td class="source-ref">GCS.cpp identifyConflictingRedundant</td></tr>
-      <tr><td><span class="pending">&#9675;</span></td><td>Parallel QR via rayon + DOF tests</td><td><span class="crate-tag">cadora-diagnosis</span></td><td class="source-ref">GCS.cpp std::async section</td></tr>
+      <tr><td><span class="check">&#10003;</span></td><td>makeReducedJacobian — constraint Jacobian builder (excludes driven params, non-driving constraints)</td><td><span class="crate-tag">cadora-diagnosis</span></td><td class="source-ref">GCS.cpp:4712-4760</td></tr>
+      <tr><td><span class="check">&#10003;</span></td><td>QR decomposition + rank computation (col-pivoted QR of J^T and J)</td><td><span class="crate-tag">cadora-diagnosis</span></td><td class="source-ref">GCS.cpp:5060-5230</td></tr>
+      <tr><td><span class="check">&#10003;</span></td><td>RREF + dependency group identification (eliminateNonZerosOverPivot)</td><td><span class="crate-tag">cadora-diagnosis</span></td><td class="source-ref">GCS.cpp:5428-5444</td></tr>
+      <tr><td><span class="check">&#10003;</span></td><td>Conflict/redundancy detection (popularity contest algorithm)</td><td><span class="crate-tag">cadora-diagnosis</span></td><td class="source-ref">GCS.cpp:5445-5700</td></tr>
+      <tr><td><span class="check">&#10003;</span></td><td>Dependent parameter identification (identifyDependentParameters via J QR)</td><td><span class="crate-tag">cadora-diagnosis</span></td><td class="source-ref">GCS.cpp:5242-5340</td></tr>
+      <tr><td><span class="check">&#10003;</span></td><td>diagnose() entry point + DiagnosisResult struct + 12 tests (DOF, conflicts, redundancy, deps)</td><td><span class="crate-tag">cadora-diagnosis</span></td><td class="source-ref">GCS.cpp:4759-4902</td></tr>
     </table>
   </div>
 </div>
 
 <!-- ==================== PHASE 8 ==================== -->
-<div class="phase">
+<div class="phase open">
   <div class="phase-header" onclick="this.parentElement.classList.toggle('open')">
-    <h3><span class="arrow">&#9654;</span> Phase 8 — System Orchestration <span class="phase-badge badge-todo">Not Started</span></h3>
-    <span class="phase-pct">0 / 5</span>
+    <h3><span class="arrow">&#9654;</span> Phase 8 — System Orchestration <span class="phase-badge badge-done">DONE</span></h3>
+    <span class="phase-pct">5 / 5</span>
   </div>
   <div class="phase-body">
     <table>
       <tr><th></th><th>Task</th><th>Crate</th><th>Source Reference</th></tr>
-      <tr><td><span class="pending">&#9675;</span></td><td>Graph partitioning (petgraph replaces Boost)</td><td><span class="crate-tag">cadora-system</span></td><td class="source-ref">GCS.cpp initSolution() boost::connected_components</td></tr>
-      <tr><td><span class="pending">&#9675;</span></td><td>Equality constraint reduction (reductionmap)</td><td><span class="crate-tag">cadora-system</span></td><td class="source-ref">GCS.cpp initSolution() Equal reduction</td></tr>
-      <tr><td><span class="pending">&#9675;</span></td><td>initSolution() — full pipeline</td><td><span class="crate-tag">cadora-system</span></td><td class="source-ref">GCS.cpp:1700-1950</td></tr>
-      <tr><td><span class="pending">&#9675;</span></td><td>solve() dispatch (single + dual subsystem)</td><td><span class="crate-tag">cadora-system</span></td><td class="source-ref">GCS.cpp solve() overloads</td></tr>
-      <tr><td><span class="pending">&#9675;</span></td><td>diagnose() orchestration + public API</td><td><span class="crate-tag">cadora-system</span></td><td class="source-ref">GCS.cpp:4800-5100</td></tr>
+      <tr><td><span class="check">&#10003;</span></td><td>Graph partitioning (petgraph replaces Boost)</td><td><span class="crate-tag">cadora-system</span></td><td class="source-ref">GCS.cpp initSolution() boost::connected_components</td></tr>
+      <tr><td><span class="check">&#10003;</span></td><td>Equality constraint reduction (reductionmap)</td><td><span class="crate-tag">cadora-system</span></td><td class="source-ref">GCS.cpp initSolution() Equal reduction</td></tr>
+      <tr><td><span class="check">&#10003;</span></td><td>initSolution() — full pipeline</td><td><span class="crate-tag">cadora-system</span></td><td class="source-ref">GCS.cpp:1700-1950</td></tr>
+      <tr><td><span class="check">&#10003;</span></td><td>solve() dispatch (single + dual subsystem)</td><td><span class="crate-tag">cadora-system</span></td><td class="source-ref">GCS.cpp solve() overloads</td></tr>
+      <tr><td><span class="check">&#10003;</span></td><td>diagnose() orchestration + public API</td><td><span class="crate-tag">cadora-system</span></td><td class="source-ref">GCS.cpp:4800-5100</td></tr>
     </table>
   </div>
 </div>
@@ -275,17 +275,17 @@
 <!-- ==================== PHASE 9 ==================== -->
 <div class="phase">
   <div class="phase-header" onclick="this.parentElement.classList.toggle('open')">
-    <h3><span class="arrow">&#9654;</span> Phase 9 — Integration &amp; Performance <span class="phase-badge badge-todo">Not Started</span></h3>
-    <span class="phase-pct">0 / 5</span>
+    <h3><span class="arrow">&#9654;</span> Phase 9 — Integration &amp; Performance <span class="phase-badge badge-done">DONE</span></h3>
+    <span class="phase-pct">5 / 5</span>
   </div>
   <div class="phase-body">
     <table>
       <tr><th></th><th>Task</th><th>Crate</th><th>Source Reference</th></tr>
-      <tr><td><span class="pending">&#9675;</span></td><td>End-to-end integration tests (full sketch scenarios)</td><td><span class="crate-tag">cadora-system</span></td><td class="source-ref">TestSketcherSolver.py scenarios</td></tr>
-      <tr><td><span class="pending">&#9675;</span></td><td>Performance benchmarks vs C++ planegcs</td><td><span class="crate-tag">benches</span></td><td class="source-ref">—</td></tr>
-      <tr><td><span class="pending">&#9675;</span></td><td>Parallelization audit (rayon, work-stealing)</td><td><span class="crate-tag">cadora-solvers</span></td><td class="source-ref">—</td></tr>
-      <tr><td><span class="pending">&#9675;</span></td><td>Memory optimization audit (allocation-free hot paths)</td><td><span class="crate-tag">all</span></td><td class="source-ref">—</td></tr>
-      <tr><td><span class="pending">&#9675;</span></td><td>API documentation + architecture guide</td><td><span class="crate-tag">all</span></td><td class="source-ref">—</td></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>End-to-end integration tests (8 scenarios: rectangle, triangle, multi-component, diagnosis, re-solve, algorithm comparison, point-on-line)</td><td><span class="crate-tag">cadora-system</span></td><td class="source-ref">TestSketcherSolver.py scenarios</td></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>Performance benchmarks (criterion: chain, grid, algorithm comparison, multi-component, init_solution)</td><td><span class="crate-tag">cadora-system</span></td><td class="source-ref">benches/solver_bench.rs</td></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>Parallelization audit (rayon opportunities documented, inner-loop overhead analysis)</td><td><span class="crate-tag">docs</span></td><td class="source-ref">docs/parallelization_audit.md</td></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>Memory optimization audit (hot-path allocation analysis, buffer reuse recommendations)</td><td><span class="crate-tag">docs</span></td><td class="source-ref">docs/memory_audit.md</td></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>API documentation + architecture guide (crate-level rustdoc, architecture.md, updated README)</td><td><span class="crate-tag">all</span></td><td class="source-ref">docs/architecture.md</td></tr>
     </table>
   </div>
 </div>
@@ -299,8 +299,8 @@
 <script>
 // Auto-calculate overall progress from checkmarks
 document.addEventListener('DOMContentLoaded', () => {
-  const done = document.querySelectorAll('.check').length;
-  const total = document.querySelectorAll('.check, .pending').length;
+  const done = document.querySelectorAll('.check, .done').length;
+  const total = document.querySelectorAll('.check, .done, .pending').length;
   document.getElementById('overallPct').textContent = done;
   document.getElementById('overallBar').style.width = Math.round(done/total*100) + '%';
 });
