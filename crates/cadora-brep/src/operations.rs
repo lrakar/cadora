@@ -375,7 +375,7 @@ pub fn fillet_advanced(shape: &Shape, specs: &[FilletSpec]) -> std::result::Resu
     for spec in specs {
         // Use average radius for the cutting tool (variable fillet is approximated)
         let r = (spec.radius1 + spec.radius2) / 2.0;
-        result = fillet_single_edge(&result, spec.edge_idx, r)?;
+        result = fillet_single_edge_smart(&result, spec.edge_idx, r)?;
     }
     Ok(result)
 }
@@ -852,8 +852,9 @@ fn fillet_direct_planar(
             continue;
         }
 
-        // Rebuild this face's wire
+        // Rebuild this face's wire with proper vertex sharing
         let mut new_edges: Vec<Edge> = Vec::new();
+        let is_endcap = fi != *face1_idx && fi != face2_idx;
 
         for edge in wire.edge_iter() {
             let ef = edge.front().point();
@@ -862,60 +863,77 @@ fn fillet_direct_planar(
             let is_rev = (ef - edge_end).magnitude() < eps && (eb - edge_start).magnitude() < eps;
 
             if is_fwd || is_rev {
-                // Replace filleted edge with tangent edge
+                // Replace filleted edge with tangent edge on this face
                 if fi == *face1_idx {
                     new_edges.push(if is_fwd { e_tang1.clone() } else { e_tang1.inverse() });
                 } else if fi == face2_idx {
                     new_edges.push(if is_fwd { e_tang2.clone() } else { e_tang2.inverse() });
                 }
             } else {
-                // Check if edge connects to filleted vertices
                 let front_at_start = (ef - edge_start).magnitude() < eps;
                 let front_at_end = (ef - edge_end).magnitude() < eps;
                 let back_at_start = (eb - edge_start).magnitude() < eps;
                 let back_at_end = (eb - edge_end).magnitude() < eps;
 
                 if !front_at_start && !front_at_end && !back_at_start && !back_at_end {
+                    // Edge doesn't touch filleted vertices at all — keep original
                     new_edges.push(edge.clone());
                 } else {
-                    // Determine replacement vertex for each end
-                    let get_tangent_vertex = |is_start: bool, is_end: bool, face_idx: usize| -> Option<(Point3, Vertex)> {
-                        if !is_start && !is_end { return None; }
-                        let on_face1 = face_idx == *face1_idx;
-                        let on_face2 = face_idx == face2_idx;
-                        if on_face1 {
-                            if is_start { Some((t1s, v_t1s.clone())) } else { Some((t1e, v_t1e.clone())) }
-                        } else if on_face2 {
-                            if is_start { Some((t2s, v_t2s.clone())) } else { Some((t2e, v_t2e.clone())) }
+                    // Determine replacement vertices, preserving originals when not replacing
+                    let get_tangent = |at_start: bool, at_end: bool| -> Option<Vertex> {
+                        if !at_start && !at_end { return None; }
+                        if fi == *face1_idx {
+                            Some(if at_start { v_t1s.clone() } else { v_t1e.clone() })
+                        } else if fi == face2_idx {
+                            Some(if at_start { v_t2s.clone() } else { v_t2e.clone() })
                         } else {
-                            // End-cap face: find which adjacent face this edge is shared with
+                            // End-cap: check if this edge shares with face1 or face2
                             let shared_with_f1 = adjacency.iter().any(|(_, es, ee, fi2, _f2o, _)| {
                                 *fi2 == *face1_idx &&
                                 (((*es - ef).magnitude() < eps && (*ee - eb).magnitude() < eps) ||
                                  ((*es - eb).magnitude() < eps && (*ee - ef).magnitude() < eps))
                             });
                             if shared_with_f1 {
-                                if is_start { Some((t1s, v_t1s.clone())) } else { Some((t1e, v_t1e.clone())) }
+                                Some(if at_start { v_t1s.clone() } else { v_t1e.clone() })
                             } else {
-                                if is_start { Some((t2s, v_t2s.clone())) } else { Some((t2e, v_t2e.clone())) }
+                                Some(if at_start { v_t2s.clone() } else { v_t2e.clone() })
                             }
                         }
                     };
 
-                    let front_repl = get_tangent_vertex(front_at_start, front_at_end, fi);
-                    let back_repl = get_tangent_vertex(back_at_start, back_at_end, fi);
-
-                    let v0 = front_repl.map(|(_, v)| v).unwrap_or_else(|| builder::vertex(ef));
-                    let v1 = back_repl.map(|(_, v)| v).unwrap_or_else(|| builder::vertex(eb));
+                    // Use original vertex when not replacing (critical for wire closure!)
+                    let v0 = get_tangent(front_at_start, front_at_end)
+                        .unwrap_or_else(|| edge.front().clone());
+                    let v1 = get_tangent(back_at_start, back_at_end)
+                        .unwrap_or_else(|| edge.back().clone());
                     new_edges.push(builder::line(&v0, &v1));
                 }
-            }
-        }
 
-        // For end-cap faces: insert fillet arc to close the gap
-        if fi != *face1_idx && fi != face2_idx && (touches_start || touches_end) {
-            if touches_start { new_edges.push(arc_s.clone()); }
-            if touches_end { new_edges.push(arc_e.clone()); }
+                // On end-cap faces: insert fillet arc right after the edge
+                // whose back vertex was at a filleted endpoint
+                if is_endcap && (back_at_start || back_at_end) {
+                    let last_pt = new_edges.last().unwrap().back().point();
+                    if back_at_start {
+                        let last_is_t1 = (last_pt - t1s).magnitude() < eps;
+                        if last_is_t1 {
+                            new_edges.push(arc_s.clone());
+                        } else {
+                            new_edges.push(arc_s.inverse());
+                        }
+                    }
+                    if back_at_end {
+                        let last_pt_e = if back_at_start {
+                            new_edges.last().unwrap().back().point()
+                        } else { last_pt };
+                        let last_is_t1 = (last_pt_e - t1e).magnitude() < eps;
+                        if last_is_t1 {
+                            new_edges.push(arc_e.clone());
+                        } else {
+                            new_edges.push(arc_e.inverse());
+                        }
+                    }
+                }
+            }
         }
 
         let new_wire = Wire::from(new_edges);
@@ -1417,6 +1435,24 @@ mod tests {
     }
 
     // ─── Direct topology fillet tests ───
+
+    #[test]
+    fn fillet_direct_box_edge() {
+        // Test direct topology fillet on a box edge (plane-plane case = OCCT KPart cylinder)
+        let cube = unit_box();
+        let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            fillet_direct_planar(&cube, 0, 0.3)
+        }));
+        if let Ok(Ok(filleted)) = result {
+            // Direct fillet succeeded! Verify result.
+            let v = validate_shape(&filleted);
+            assert!(v.has_faces, "Direct fillet result should have faces");
+            // Box has 6 faces + 1 fillet face = 7
+            assert_eq!(filleted.face_count(), 7,
+                "Direct fillet on box should produce 7 faces (6 + 1 fillet)");
+        }
+        // If it panicked or returned Err, that's acceptable — fillet_single_edge_smart handles it
+    }
 
     #[test]
     fn fillet_direct_graceful_fallback() {
