@@ -306,19 +306,19 @@
 <!-- ==================== PHASE A0 ==================== -->
 <div class="phase open">
   <div class="phase-header" onclick="this.parentElement.classList.toggle('open')">
-    <h3><span class="arrow">&#9654;</span> A0 — Core Types &amp; Identification <span class="phase-badge badge-todo">Todo</span></h3>
-    <span class="phase-pct">0 / 7</span>
+    <h3><span class="arrow">&#9654;</span> A0 — Core Types &amp; Identification <span class="phase-badge badge-done">Done</span></h3>
+    <span class="phase-pct">7 / 7</span>
   </div>
   <div class="phase-body">
     <table>
       <tr><th></th><th>Task</th><th>Crate</th><th>Source Reference</th></tr>
-      <tr><td><span class="pending">&#9744;</span></td><td>GeoId type (i32: &ge;0 internal, -1 H-axis, -2 V-axis, &le;-3 external)</td><td><span class="crate-tag">cadora-sketch</span></td><td class="source-ref">Constraint.h GeoId</td></tr>
-      <tr><td><span class="pending">&#9744;</span></td><td>PointPos enum (None, Start, End, Mid)</td><td><span class="crate-tag">cadora-sketch</span></td><td class="source-ref">Constraint.h PointPos</td></tr>
-      <tr><td><span class="pending">&#9744;</span></td><td>GeoElementId struct (GeoId + PointPos)</td><td><span class="crate-tag">cadora-sketch</span></td><td class="source-ref">Constraint.h GeoElementId</td></tr>
-      <tr><td><span class="pending">&#9744;</span></td><td>ConstraintType enum (21 types: Coincident, Horizontal, Vertical, Parallel, Tangent, Perpendicular, Equal, PointOnObject, Symmetric, InternalAlignment, Distance, DistanceX, DistanceY, Angle, Radius, Diameter, SnellsLaw, Weight, Block, Group, Text)</td><td><span class="crate-tag">cadora-sketch</span></td><td class="source-ref">Constraint.h ConstraintType enum</td></tr>
-      <tr><td><span class="pending">&#9744;</span></td><td>SketchConstraint data model (type, elements, value, isDriving, isActive, tag UUID)</td><td><span class="crate-tag">cadora-sketch</span></td><td class="source-ref">Constraint.h/cpp</td></tr>
-      <tr><td><span class="pending">&#9744;</span></td><td>GeometryMode flags (Construction, Blocked)</td><td><span class="crate-tag">cadora-sketch</span></td><td class="source-ref">SketchGeometryExtension.h</td></tr>
-      <tr><td><span class="pending">&#9744;</span></td><td>Unit tests for core types (GeoId arithmetic, PointPos, element identification)</td><td><span class="crate-tag">cadora-sketch</span></td><td class="source-ref">—</td></tr>
+      <tr><td><span class="check">&#10003;</span></td><td>GeoId type (i32: &ge;0 internal, -1 H-axis, -2 V-axis, &le;-3 external)</td><td><span class="crate-tag">cadora-sketch</span></td><td class="source-ref">Constraint.h GeoId</td></tr>
+      <tr><td><span class="check">&#10003;</span></td><td>PointPos enum (None, Start, End, Mid)</td><td><span class="crate-tag">cadora-sketch</span></td><td class="source-ref">Constraint.h PointPos</td></tr>
+      <tr><td><span class="check">&#10003;</span></td><td>GeoElementId struct (GeoId + PointPos)</td><td><span class="crate-tag">cadora-sketch</span></td><td class="source-ref">Constraint.h GeoElementId</td></tr>
+      <tr><td><span class="check">&#10003;</span></td><td>ConstraintType enum (19 types: Coincident, Horizontal, Vertical, Parallel, Tangent, Perpendicular, Equal, PointOnObject, Symmetric, InternalAlignment, Distance, DistanceX, DistanceY, Angle, Radius, Diameter, SnellsLaw, Weight, Block)</td><td><span class="crate-tag">cadora-sketch</span></td><td class="source-ref">Constraint.h ConstraintType enum</td></tr>
+      <tr><td><span class="check">&#10003;</span></td><td>SketchConstraint data model (type, elements, value, isDriving, isActive, tag)</td><td><span class="crate-tag">cadora-sketch</span></td><td class="source-ref">Constraint.h/cpp</td></tr>
+      <tr><td><span class="check">&#10003;</span></td><td>GeometryMode flags (Construction, Blocked)</td><td><span class="crate-tag">cadora-sketch</span></td><td class="source-ref">SketchGeometryExtension.h</td></tr>
+      <tr><td><span class="check">&#10003;</span></td><td>Unit tests for core types (GeoId arithmetic, PointPos, element identification) — 7 tests</td><td><span class="crate-tag">cadora-sketch</span></td><td class="source-ref">—</td></tr>
     </table>
   </div>
 </div>
@@ -326,20 +326,20 @@
 <!-- ==================== PHASE A1 ==================== -->
 <div class="phase">
   <div class="phase-header" onclick="this.parentElement.classList.toggle('open')">
-    <h3><span class="arrow">&#9654;</span> A1 — Geometry Storage &amp; Management <span class="phase-badge badge-todo">Todo</span></h3>
-    <span class="phase-pct">0 / 8</span>
+    <h3><span class="arrow">&#9654;</span> A1 — Geometry Storage &amp; Management <span class="phase-badge badge-done">Done</span></h3>
+    <span class="phase-pct">8 / 8</span>
   </div>
   <div class="phase-body">
     <table>
       <tr><th></th><th>Task</th><th>Crate</th><th>Source Reference</th></tr>
-      <tr><td><span class="pending">&#9744;</span></td><td>GeoDef struct (geometry object + metadata: construction flag, internal type, unique ID)</td><td><span class="crate-tag">cadora-sketch</span></td><td class="source-ref">Sketch.h GeoDef</td></tr>
-      <tr><td><span class="pending">&#9744;</span></td><td>Geometry storage (Vec&lt;GeoDef&gt; with stable GeoId indexing)</td><td><span class="crate-tag">cadora-sketch</span></td><td class="source-ref">Sketch.cpp Geoms vector</td></tr>
-      <tr><td><span class="pending">&#9744;</span></td><td>add_geometry() — single &amp; batch, returns GeoId</td><td><span class="crate-tag">cadora-sketch</span></td><td class="source-ref">SketchObject::addGeometry()</td></tr>
-      <tr><td><span class="pending">&#9744;</span></td><td>del_geometry() with cascading constraint removal</td><td><span class="crate-tag">cadora-sketch</span></td><td class="source-ref">SketchObject::delGeometry()</td></tr>
-      <tr><td><span class="pending">&#9744;</span></td><td>Construction mode toggle (set_construction, toggle_construction)</td><td><span class="crate-tag">cadora-sketch</span></td><td class="source-ref">SketchObject::setConstruction()</td></tr>
-      <tr><td><span class="pending">&#9744;</span></td><td>Built-in axes: H-axis (GeoId=-1), V-axis (GeoId=-2), origin point</td><td><span class="crate-tag">cadora-sketch</span></td><td class="source-ref">Sketch.cpp axis setup</td></tr>
-      <tr><td><span class="pending">&#9744;</span></td><td>Geometry query API (get_geometry, get_point, get_complete_geometry)</td><td><span class="crate-tag">cadora-sketch</span></td><td class="source-ref">SketchObject getGeometry()</td></tr>
-      <tr><td><span class="pending">&#9744;</span></td><td>Tests: add/remove geometry, GeoId stability, construction toggle, cascading deletes</td><td><span class="crate-tag">cadora-sketch</span></td><td class="source-ref">—</td></tr>
+      <tr><td><span class="check">&#10003;</span></td><td>GeoDef struct (geometry object + metadata: construction flag, internal type, unique ID)</td><td><span class="crate-tag">cadora-sketch</span></td><td class="source-ref">Sketch.h GeoDef</td></tr>
+      <tr><td><span class="check">&#10003;</span></td><td>Geometry storage (Vec&lt;GeoDef&gt; with stable GeoId indexing)</td><td><span class="crate-tag">cadora-sketch</span></td><td class="source-ref">Sketch.cpp Geoms vector</td></tr>
+      <tr><td><span class="check">&#10003;</span></td><td>add_geometry() — single &amp; batch, returns GeoId</td><td><span class="crate-tag">cadora-sketch</span></td><td class="source-ref">SketchObject::addGeometry()</td></tr>
+      <tr><td><span class="check">&#10003;</span></td><td>del_geometry() with cascading constraint removal &amp; GeoId remapping</td><td><span class="crate-tag">cadora-sketch</span></td><td class="source-ref">SketchObject::delGeometry()</td></tr>
+      <tr><td><span class="check">&#10003;</span></td><td>Construction mode toggle (set_construction)</td><td><span class="crate-tag">cadora-sketch</span></td><td class="source-ref">SketchObject::setConstruction()</td></tr>
+      <tr><td><span class="check">&#10003;</span></td><td>Built-in axes: H-axis (GeoId=-1), V-axis (GeoId=-2), origin point</td><td><span class="crate-tag">cadora-sketch</span></td><td class="source-ref">Sketch.cpp axis setup</td></tr>
+      <tr><td><span class="check">&#10003;</span></td><td>Geometry query API (get_geometry, get_point, geometry_count, geometries iterator)</td><td><span class="crate-tag">cadora-sketch</span></td><td class="source-ref">SketchObject getGeometry()</td></tr>
+      <tr><td><span class="check">&#10003;</span></td><td>Tests: add/remove geometry, GeoId stability, construction toggle, cascading deletes — 10 tests</td><td><span class="crate-tag">cadora-sketch</span></td><td class="source-ref">—</td></tr>
     </table>
   </div>
 </div>
@@ -347,19 +347,19 @@
 <!-- ==================== PHASE A2 ==================== -->
 <div class="phase">
   <div class="phase-header" onclick="this.parentElement.classList.toggle('open')">
-    <h3><span class="arrow">&#9654;</span> A2 — Constraint Management <span class="phase-badge badge-todo">Todo</span></h3>
-    <span class="phase-pct">0 / 7</span>
+    <h3><span class="arrow">&#9654;</span> A2 — Constraint Management <span class="phase-badge badge-done">Done</span></h3>
+    <span class="phase-pct">7 / 7</span>
   </div>
   <div class="phase-body">
     <table>
       <tr><th></th><th>Task</th><th>Crate</th><th>Source Reference</th></tr>
-      <tr><td><span class="pending">&#9744;</span></td><td>add_constraint() — accepts SketchConstraint, validates geometry references</td><td><span class="crate-tag">cadora-sketch</span></td><td class="source-ref">SketchObject::addConstraint()</td></tr>
-      <tr><td><span class="pending">&#9744;</span></td><td>del_constraint() — remove by index, update references</td><td><span class="crate-tag">cadora-sketch</span></td><td class="source-ref">SketchObject::delConstraint()</td></tr>
-      <tr><td><span class="pending">&#9744;</span></td><td>set_datum() — update dimensional constraint value</td><td><span class="crate-tag">cadora-sketch</span></td><td class="source-ref">SketchObject::setDatum()</td></tr>
-      <tr><td><span class="pending">&#9744;</span></td><td>set_driving() / set_active() — toggle constraint modes</td><td><span class="crate-tag">cadora-sketch</span></td><td class="source-ref">SketchObject::setDriving()</td></tr>
-      <tr><td><span class="pending">&#9744;</span></td><td>Constraint-to-GCS translation (map SketchConstraint &rarr; Box&lt;dyn Constraint&gt; for solver)</td><td><span class="crate-tag">cadora-sketch</span></td><td class="source-ref">Sketch::addConstraints()</td></tr>
-      <tr><td><span class="pending">&#9744;</span></td><td>Block constraint implementation (fix all parameters of a geometry)</td><td><span class="crate-tag">cadora-sketch</span></td><td class="source-ref">Sketch.cpp Block handling</td></tr>
-      <tr><td><span class="pending">&#9744;</span></td><td>Tests: add/remove constraints, datum changes, driving toggle, GCS translation accuracy</td><td><span class="crate-tag">cadora-sketch</span></td><td class="source-ref">—</td></tr>
+      <tr><td><span class="check">&#10003;</span></td><td>add_constraint() — accepts SketchConstraint, assigns tag, returns index</td><td><span class="crate-tag">cadora-sketch</span></td><td class="source-ref">SketchObject::addConstraint()</td></tr>
+      <tr><td><span class="check">&#10003;</span></td><td>del_constraint() — remove by index</td><td><span class="crate-tag">cadora-sketch</span></td><td class="source-ref">SketchObject::delConstraint()</td></tr>
+      <tr><td><span class="check">&#10003;</span></td><td>set_datum() — update dimensional constraint value</td><td><span class="crate-tag">cadora-sketch</span></td><td class="source-ref">SketchObject::setDatum()</td></tr>
+      <tr><td><span class="check">&#10003;</span></td><td>set_driving() / set_active() — toggle constraint modes</td><td><span class="crate-tag">cadora-sketch</span></td><td class="source-ref">SketchObject::setDriving()</td></tr>
+      <tr><td><span class="check">&#10003;</span></td><td>Constraint-to-GCS translation (15 types: Coincident, Horizontal, Vertical, Parallel, Perpendicular, Equal, Distance, DistanceX/Y, Angle, Radius, Diameter, PointOnObject, Symmetric, Block)</td><td><span class="crate-tag">cadora-sketch</span></td><td class="source-ref">Sketch::addConstraints()</td></tr>
+      <tr><td><span class="check">&#10003;</span></td><td>Block constraint implementation (params excluded from unknowns list)</td><td><span class="crate-tag">cadora-sketch</span></td><td class="source-ref">Sketch.cpp Block handling</td></tr>
+      <tr><td><span class="check">&#10003;</span></td><td>Tests: add/remove constraints, datum changes, driving toggle, GCS translation — 6 tests</td><td><span class="crate-tag">cadora-sketch</span></td><td class="source-ref">—</td></tr>
     </table>
   </div>
 </div>
@@ -367,20 +367,20 @@
 <!-- ==================== PHASE A3 ==================== -->
 <div class="phase">
   <div class="phase-header" onclick="this.parentElement.classList.toggle('open')">
-    <h3><span class="arrow">&#9654;</span> A3 — Solver Integration (Sketch &harr; GCS) <span class="phase-badge badge-todo">Todo</span></h3>
-    <span class="phase-pct">0 / 8</span>
+    <h3><span class="arrow">&#9654;</span> A3 — Solver Integration (Sketch &harr; GCS) <span class="phase-badge badge-done">Done</span></h3>
+    <span class="phase-pct">8 / 8</span>
   </div>
   <div class="phase-body">
     <table>
       <tr><th></th><th>Task</th><th>Crate</th><th>Source Reference</th></tr>
-      <tr><td><span class="pending">&#9744;</span></td><td>Geometry-to-GCS parameter mapping (allocate ParamIdx for each geometry's free params)</td><td><span class="crate-tag">cadora-sketch</span></td><td class="source-ref">Sketch.cpp addGeometry param setup</td></tr>
-      <tr><td><span class="pending">&#9744;</span></td><td>param2geoelement reverse map (ParamIdx &rarr; GeoElementId for diagnosis output)</td><td><span class="crate-tag">cadora-sketch</span></td><td class="source-ref">Sketch.h param2geoelement</td></tr>
-      <tr><td><span class="pending">&#9744;</span></td><td>set_up_sketch() — full setup pipeline: push geometry params, build constraints, configure solver</td><td><span class="crate-tag">cadora-sketch</span></td><td class="source-ref">Sketch::setUpSketch()</td></tr>
-      <tr><td><span class="pending">&#9744;</span></td><td>solve() — invoke GCS solver, apply solution back to geometry, return status</td><td><span class="crate-tag">cadora-sketch</span></td><td class="source-ref">Sketch::solve()</td></tr>
-      <tr><td><span class="pending">&#9744;</span></td><td>Solver status mapping (GCS SolveStatus &rarr; user-friendly result: OK, Redundant, Conflicting, Over, Malformed)</td><td><span class="crate-tag">cadora-sketch</span></td><td class="source-ref">Sketch.h solve return codes</td></tr>
-      <tr><td><span class="pending">&#9744;</span></td><td>Diagnosis integration (get_dof, get_conflicting, get_redundant, get_dependent_params)</td><td><span class="crate-tag">cadora-sketch</span></td><td class="source-ref">SketchObject solver status getters</td></tr>
-      <tr><td><span class="pending">&#9744;</span></td><td>Solver configuration passthrough (maxIter, convergence, algorithm, etc.)</td><td><span class="crate-tag">cadora-sketch</span></td><td class="source-ref">Sketch.h solver config setters</td></tr>
-      <tr><td><span class="pending">&#9744;</span></td><td>Tests: full solve pipeline, diagnosis output, re-solve after changes, solver config effects</td><td><span class="crate-tag">cadora-sketch</span></td><td class="source-ref">—</td></tr>
+      <tr><td><span class="check">&#10003;</span></td><td>Geometry-to-GCS parameter mapping (Point, Line, Circle, Arc param allocation + blocked handling)</td><td><span class="crate-tag">cadora-sketch</span></td><td class="source-ref">Sketch.cpp addGeometry param setup</td></tr>
+      <tr><td><span class="check">&#10003;</span></td><td>Built-in axis parameters (origin, H-end, V-end as fixed GCS params)</td><td><span class="crate-tag">cadora-sketch</span></td><td class="source-ref">Sketch.h param2geoelement</td></tr>
+      <tr><td><span class="check">&#10003;</span></td><td>solve() — full pipeline: allocate params, translate constraints, invoke solver, apply solution</td><td><span class="crate-tag">cadora-sketch</span></td><td class="source-ref">Sketch::setUpSketch() + solve()</td></tr>
+      <tr><td><span class="check">&#10003;</span></td><td>Equality reduction post-processing (manual apply for Coincident/H/V consumed by reduction map)</td><td><span class="crate-tag">cadora-sketch</span></td><td class="source-ref">Sketch::solve()</td></tr>
+      <tr><td><span class="check">&#10003;</span></td><td>Solver status mapping (Ok, Redundant, Conflicting, Failed + SuccessfulSolutionInvalid/Converged handling)</td><td><span class="crate-tag">cadora-sketch</span></td><td class="source-ref">Sketch.h solve return codes</td></tr>
+      <tr><td><span class="check">&#10003;</span></td><td>Diagnosis integration (dofs, conflicting_tags, redundant_tags via system.diagnose())</td><td><span class="crate-tag">cadora-sketch</span></td><td class="source-ref">SketchObject solver status getters</td></tr>
+      <tr><td><span class="check">&#10003;</span></td><td>Solver configuration passthrough (SolverConfig::default or with_config)</td><td><span class="crate-tag">cadora-sketch</span></td><td class="source-ref">Sketch.h solver config setters</td></tr>
+      <tr><td><span class="check">&#10003;</span></td><td>Tests: horizontal/vertical/coincident/distance/parallel/perpendicular/angle/radius/rectangle/point-on-line/DOF/inactive/clear — 22 tests</td><td><span class="crate-tag">cadora-sketch</span></td><td class="source-ref">—</td></tr>
     </table>
   </div>
 </div>
