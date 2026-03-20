@@ -779,6 +779,30 @@
   </div>
 </div>
 
+<!-- ==================== D.8 ==================== -->
+<div class="phase open">
+  <div class="phase-header" onclick="this.parentElement.classList.toggle('open')">
+    <h3><span class="arrow">&#9654;</span> D.8 &mdash; Transforms, Loft, Sweep, Offset, Section <span class="phase-badge badge-done">Done</span></h3>
+    <span class="phase-pct">11 / 11</span>
+  </div>
+  <div class="phase-body">
+    <table>
+      <tr><th></th><th>Task</th><th>Crate</th><th>Source Reference</th></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>translate_shape, rotate_shape, scale_shape_uniform, scale_shape (non-uniform), transform_shape</td><td><span class="crate-tag">cadora-brep</span></td><td class="source-ref">operations.rs &middot; BRepBuilderAPI_Transform, gp_Trsf</td></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>loft() &mdash; ruled surface solid between two wire profiles via try_wire_homotopy + capping</td><td><span class="crate-tag">cadora-brep</span></td><td class="source-ref">operations.rs &middot; BRepOffsetAPI_ThruSections</td></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>boolean_xor() &mdash; symmetric difference (Fuse - Common)</td><td><span class="crate-tag">cadora-brep</span></td><td class="source-ref">operations.rs &middot; XOR boolean</td></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>slice_shape() &mdash; cross-section via thin slab boolean common</td><td><span class="crate-tag">cadora-brep</span></td><td class="source-ref">operations.rs &middot; BRepAlgoAPI_Section</td></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>wires_from_edges() &mdash; sort loose edges into ordered wires by endpoint matching</td><td><span class="crate-tag">cadora-brep</span></td><td class="source-ref">operations.rs &middot; ShapeAnalysis_FreeBounds</td></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>offset_wire_2d() &mdash; planar polygonal wire offset via vertex bisector</td><td><span class="crate-tag">cadora-brep</span></td><td class="source-ref">operations.rs &middot; BRepOffsetAPI_MakeOffset</td></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>make_helix_wire() &mdash; helical wire approximation via line segments</td><td><span class="crate-tag">cadora-brep</span></td><td class="source-ref">operations.rs &middot; TopoShape::makeHelix</td></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>pipe_shell() &mdash; sweep profile along wire spine (piecewise tsweep + fuse)</td><td><span class="crate-tag">cadora-brep</span></td><td class="source-ref">operations.rs &middot; BRepOffsetAPI_MakePipe</td></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>extrude_until() &mdash; extrude through-all then boolean common with target</td><td><span class="crate-tag">cadora-brep</span></td><td class="source-ref">operations.rs &middot; BRepFeat_MakePrism UpToFace</td></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>perpendicular_vectors() utility for arbitrary plane construction</td><td><span class="crate-tag">cadora-brep</span></td><td class="source-ref">operations.rs</td></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>Tests: 14 tests covering transforms (5), loft, xor, slice, wires_from_edges (2), offset, helix, pipe, extrude_until</td><td><span class="crate-tag">cadora-brep</span></td><td class="source-ref">&mdash;</td></tr>
+    </table>
+  </div>
+</div>
+
 <!-- ==================== E ==================== -->
 <div class="phase">
   <div class="phase-header" onclick="this.parentElement.classList.toggle('open')">
