@@ -824,8 +824,8 @@
 <!-- ==================== F ==================== -->
 <div class="phase">
   <div class="phase-header" onclick="this.parentElement.classList.toggle('open')">
-    <h3><span class="arrow">&#9654;</span> F &mdash; PartDesign Operations <span class="phase-badge badge-progress">In Progress</span></h3>
-    <span class="phase-pct">8 / 10</span>
+    <h3><span class="arrow">&#9654;</span> F &mdash; PartDesign Operations <span class="phase-badge badge-done">Done</span></h3>
+    <span class="phase-pct">10 / 10</span>
   </div>
   <div class="phase-body">
     <table>
@@ -847,16 +847,16 @@
 <!-- ==================== G ==================== -->
 <div class="phase">
   <div class="phase-header" onclick="this.parentElement.classList.toggle('open')">
-    <h3><span class="arrow">&#9654;</span> G &mdash; Datums &amp; Attachment <span class="phase-badge badge-todo">Todo</span></h3>
-    <span class="phase-pct">0 / 4</span>
+    <h3><span class="arrow">&#9654;</span> G &mdash; Datums &amp; Attachment <span class="phase-badge badge-done">Done</span></h3>
+    <span class="phase-pct">4 / 4</span>
   </div>
   <div class="phase-body">
     <table>
       <tr><th></th><th>Task</th><th>Crate</th><th>Source Reference</th></tr>
-      <tr><td><span class="pending">&#9744;</span></td><td>DatumPlane, DatumLine, DatumPoint</td><td><span class="crate-tag">cadora-partdesign</span></td><td class="source-ref">PartDesign::Datum*</td></tr>
-      <tr><td><span class="pending">&#9744;</span></td><td>Attachment engine (~40 modes: FlatFace, NormalToEdge, etc.)</td><td><span class="crate-tag">cadora-partdesign</span></td><td class="source-ref">Part::Attacher, AttachEngine</td></tr>
-      <tr><td><span class="pending">&#9744;</span></td><td>Coordinate system (local CS for features)</td><td><span class="crate-tag">cadora-partdesign</span></td><td class="source-ref">PartDesign::CoordinateSystem</td></tr>
-      <tr><td><span class="pending">&#9744;</span></td><td>ShapeBinder (reference geometry from other bodies)</td><td><span class="crate-tag">cadora-partdesign</span></td><td class="source-ref">PartDesign::ShapeBinder</td></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>DatumPlane, DatumLine, DatumPoint &mdash; with Placement, normal/direction queries, Feature trait impl</td><td><span class="crate-tag">cadora-partdesign</span></td><td class="source-ref">datum.rs &middot; PartDesign::Datum*</td></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>Attachment engine (55 modes: FlatFace, NormalToEdge, ThreePointsPlane, Frenet, Concentric, etc.) &mdash; mirrors Part::AttachEngine eMapMode dispatch</td><td><span class="crate-tag">cadora-partdesign</span></td><td class="source-ref">datum.rs &middot; Part::Attacher, AttachEngine</td></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>Coordinate system (local CS for features) &mdash; to_global/to_local transforms, axis queries, attachment</td><td><span class="crate-tag">cadora-partdesign</span></td><td class="source-ref">datum.rs &middot; PartDesign::CoordinateSystem</td></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>ShapeBinder (reference geometry from other bodies) &mdash; bind with placement transform, trace support</td><td><span class="crate-tag">cadora-partdesign</span></td><td class="source-ref">datum.rs &middot; PartDesign::ShapeBinder</td></tr>
     </table>
   </div>
 </div>

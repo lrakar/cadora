@@ -8,7 +8,9 @@ description = "PartDesign feature framework for CADORA CAD (Body, Feature, Pad, 
 
 [dependencies]
 cadora-brep = { path = "../cadora-brep" }
+cadora-document = { path = "../cadora-document" }
 truck-modeling = "0.6"
+cgmath = "0.18"
 
 [dev-dependencies]
 approx = { workspace = true }
