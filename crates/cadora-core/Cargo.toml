@@ -1,0 +1,10 @@
+[package]
+name = "cadora-core"
+description = "Core types: parameter store, indices, solver enums"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+
+[dev-dependencies]

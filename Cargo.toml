@@ -1,0 +1,51 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/cadora-core",
+    "crates/cadora-math",
+    "crates/cadora-geo",
+    "crates/cadora-constraints",
+    "crates/cadora-subsystem",
+    "crates/cadora-solvers",
+    "crates/cadora-diagnosis",
+    "crates/cadora-system",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+license = "LGPL-2.1-or-later"
+repository = "https://github.com/lrakar/cadora"
+
+[workspace.dependencies]
+# Linear algebra
+nalgebra = "0.33"
+faer = "0.20"
+
+# Parallelization
+rayon = "1.10"
+
+# Graph algorithms (replaces Boost.Graph)
+petgraph = "0.7"
+
+# Logging / diagnostics
+tracing = "0.1"
+tracing-subscriber = "0.3"
+
+# Testing
+approx = "0.5"
+
+# Internal workspace crates
+cadora-core = { path = "crates/cadora-core" }
+cadora-math = { path = "crates/cadora-math" }
+cadora-geo = { path = "crates/cadora-geo" }
+cadora-constraints = { path = "crates/cadora-constraints" }
+cadora-subsystem = { path = "crates/cadora-subsystem" }
+cadora-solvers = { path = "crates/cadora-solvers" }
+cadora-diagnosis = { path = "crates/cadora-diagnosis" }
+cadora-system = { path = "crates/cadora-system" }
+
+[profile.release]
+lto = true
+codegen-units = 1
+opt-level = 3

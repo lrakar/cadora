@@ -1,0 +1,14 @@
+[package]
+name = "cadora-constraints"
+description = "All 36 geometric constraint types with error + gradient"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+cadora-core = { workspace = true }
+cadora-math = { workspace = true }
+cadora-geo = { workspace = true }
+
+[dev-dependencies]
+approx = { workspace = true }

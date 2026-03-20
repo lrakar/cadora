@@ -1,0 +1,15 @@
+[package]
+name = "cadora-subsystem"
+description = "Partitioned subsystem: parameter scoping, Jacobian, gradient evaluation"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+cadora-core = { workspace = true }
+cadora-math = { workspace = true }
+cadora-constraints = { workspace = true }
+nalgebra = { workspace = true }
+
+[dev-dependencies]
+approx = { workspace = true }

@@ -1,0 +1,18 @@
+[package]
+name = "cadora-diagnosis"
+description = "QR rank analysis, DOF computation, conflict/redundancy detection"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+cadora-core = { workspace = true }
+cadora-subsystem = { workspace = true }
+cadora-constraints = { workspace = true }
+nalgebra = { workspace = true }
+faer = { workspace = true }
+rayon = { workspace = true }
+tracing = { workspace = true }
+
+[dev-dependencies]
+approx = { workspace = true }
