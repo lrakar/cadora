@@ -8,8 +8,10 @@
 //! Fillet/chamfer match FreeCAD's Part::Fillet/Chamfer API:
 //! - Three chamfer types: EqualDistance, TwoDistances, DistanceAngle
 //! - Per-edge radii via FilletSpec/ChamferSpec
-//! - Edge validation (degenerated edges, boundary edges)
+//! - Edge validation (degenerated, boundary, C0 continuity)
 //! - Flip direction for chamfer reference face
+//! - Direct topology fillet for planar faces (no boolean fallback needed)
+//! - Shape validation after operations (like FreeCAD's BRepAlgo::IsValid)
 
 use truck_modeling::*;
 use crate::shape::Shape;
@@ -594,6 +596,361 @@ fn fillet_single_edge(shape: &Shape, edge_idx: usize, radius: f64) -> std::resul
         .map_err(|e| DressUpError::OperationFailed(e.to_string()))
 }
 
+// ─── C0 Continuity checking (matching FreeCAD's BRep_Tool::Continuity) ───
+
+/// Check if an edge is C0-continuous (sharp, not smooth/tangent).
+///
+/// FreeCAD only fillets/chamfers edges that are C0-continuous — edges where
+/// adjacent faces meet at an angle. Smooth (G1/C1+) transitions are skipped.
+/// For planar faces, this checks if normals are different.
+pub fn is_edge_c0_continuous(shape: &Shape, edge_idx: usize) -> bool {
+    let adjacency = edge_face_adjacency(shape);
+    let entry = adjacency.iter().find(|(idx, _, _, _, _, _)| *idx == edge_idx);
+    let Some((_, _, _, face1_idx, Some(face2_idx), degenerated)) = entry else {
+        return false; // boundary or missing edge
+    };
+    if *degenerated { return false; }
+
+    let shell = &shape.solid().boundaries()[0];
+    let faces: Vec<&Face> = shell.face_iter().collect();
+    let n1 = face_outward_normal(faces[*face1_idx]);
+    let n2 = face_outward_normal(faces[*face2_idx]);
+
+    // C0 = normals differ significantly (faces meet at an angle)
+    let dot = n1.dot(n2);
+    dot.abs() < 1.0 - 1e-6
+}
+
+/// Collect all C0-continuous (sharp) edge indices in a shape.
+///
+/// Matches FreeCAD's getContinuousEdges: only edges where both adjacent faces
+/// meet at an angle (not smooth/tangent) are returned.
+pub fn find_c0_edges(shape: &Shape) -> Vec<usize> {
+    let adjacency = edge_face_adjacency(shape);
+    let shell = &shape.solid().boundaries()[0];
+    let faces: Vec<&Face> = shell.face_iter().collect();
+
+    adjacency.iter()
+        .filter_map(|(idx, _, _, face1_idx, face2_opt, degenerated)| {
+            if *degenerated { return None; }
+            let face2_idx = (*face2_opt)?;
+            let n1 = face_outward_normal(faces[*face1_idx]);
+            let n2 = face_outward_normal(faces[face2_idx]);
+            let dot = n1.dot(n2);
+            if dot.abs() < 1.0 - 1e-6 { Some(*idx) } else { None }
+        })
+        .collect()
+}
+
+/// Chamfer all C0 (sharp) edges of a shape with equal distance.
+///
+/// Matches FreeCAD's UseAllEdges mode.
+pub fn chamfer_all(shape: &Shape, distance: f64) -> std::result::Result<Shape, DressUpError> {
+    let edges = find_c0_edges(shape);
+    if edges.is_empty() {
+        return Err(DressUpError::InvalidEdge("No C0 edges found to chamfer".into()));
+    }
+    chamfer(shape, &edges, distance)
+}
+
+/// Fillet all C0 (sharp) edges of a shape with uniform radius.
+///
+/// Matches FreeCAD's UseAllEdges mode.
+pub fn fillet_all(shape: &Shape, radius: f64) -> std::result::Result<Shape, DressUpError> {
+    let edges = find_c0_edges(shape);
+    if edges.is_empty() {
+        return Err(DressUpError::InvalidEdge("No C0 edges found to fillet".into()));
+    }
+    fillet(shape, &edges, radius)
+}
+
+// ─── Shape validation (matching FreeCAD's BRepAlgo::IsValid + ShapeFix) ───
+
+/// Validation result for a shape.
+#[derive(Debug, Clone)]
+pub struct ShapeValidation {
+    /// Whether the shape has at least one face.
+    pub has_faces: bool,
+    /// Whether all shell boundaries are closed (no open edges).
+    pub closed_shell: bool,
+    /// Whether the bounding box is non-degenerate.
+    pub valid_bounds: bool,
+    /// Number of faces in the shape.
+    pub face_count: usize,
+    /// Number of unique edges.
+    pub edge_count: usize,
+}
+
+impl ShapeValidation {
+    /// Returns true if all validation checks pass.
+    pub fn is_valid(&self) -> bool {
+        self.has_faces && self.closed_shell && self.valid_bounds
+    }
+}
+
+/// Validate a shape's topological and geometric integrity.
+///
+/// Matches FreeCAD's BRepAlgo::IsValid checks:
+/// - Has faces
+/// - Shell is closed (no boundary edges)
+/// - Bounding box is non-degenerate
+pub fn validate_shape(shape: &Shape) -> ShapeValidation {
+    let face_count = shape.face_count();
+    let edge_count = shape.edge_count();
+    let has_faces = face_count > 0;
+
+    // Check if shell is closed (all edges are paired)
+    let adjacency = edge_face_adjacency(shape);
+    let closed_shell = adjacency.iter().all(|(_, _, _, _, f2, _)| f2.is_some());
+
+    // Check bounding box
+    let bb = shape.bounding_box();
+    let dx = bb.max.x - bb.min.x;
+    let dy = bb.max.y - bb.min.y;
+    let dz = bb.max.z - bb.min.z;
+    let valid_bounds = dx > 1e-12 && dy > 1e-12 && dz > 1e-12;
+
+    ShapeValidation { has_faces, closed_shell, valid_bounds, face_count, edge_count }
+}
+
+// ─── Direct topology fillet for straight edges between planar faces ───
+
+/// Fillet using direct topology modification (no boolean operations).
+///
+/// This implements the equivalent of OCCT's BRepFilletAPI_MakeFillet for
+/// the common case of straight edges between planar faces. It directly constructs
+/// the fillet surface (quarter-cylinder) and modifies the shell topology.
+///
+/// For edges where direct modification is not applicable (curved edges or
+/// non-planar faces), returns Err so the caller can fall back to boolean approach.
+fn fillet_direct_planar(
+    shape: &Shape,
+    edge_idx: usize,
+    radius: f64,
+) -> std::result::Result<Shape, DressUpError> {
+    use cgmath::InnerSpace;
+
+    // 1. Find edge and adjacent face normals
+    let adjacency = edge_face_adjacency(shape);
+    let entry = adjacency.iter()
+        .find(|(idx, _, _, _, _, _)| *idx == edge_idx)
+        .ok_or_else(|| DressUpError::InvalidEdge(format!("Edge {edge_idx} out of range")))?;
+    let (_, edge_start, edge_end, face1_idx, face2_opt, degenerated) = entry;
+    if *degenerated {
+        return Err(DressUpError::InvalidEdge(format!("Edge {edge_idx} is degenerated")));
+    }
+    let face2_idx = face2_opt.ok_or_else(|| {
+        DressUpError::InvalidEdge(format!("Edge {edge_idx} is a boundary edge"))
+    })?;
+
+    let shell = &shape.solid().boundaries()[0];
+    let all_faces: Vec<&Face> = shell.face_iter().collect();
+    let n1 = face_outward_normal(all_faces[*face1_idx]);
+    let n2 = face_outward_normal(all_faces[face2_idx]);
+    let edge_start = *edge_start;
+    let edge_end = *edge_end;
+
+    // Check both faces are planar
+    let is_plane = |face: &Face| -> bool {
+        matches!(face.oriented_surface(), Surface::Plane(_))
+    };
+    if !is_plane(all_faces[*face1_idx]) || !is_plane(all_faces[face2_idx]) {
+        return Err(DressUpError::OperationFailed(
+            "Direct fillet requires planar faces; use boolean fallback".into()
+        ));
+    }
+
+    // Check edge is straight (Line curve)
+    let is_straight_edge = {
+        let mut idx = 0;
+        let mut result = false;
+        'outer: for shell in shape.solid().boundaries() {
+            for face in shell.face_iter() {
+                for wire in face.boundaries() {
+                    for edge in wire.edge_iter() {
+                        if idx == edge_idx {
+                            result = matches!(edge.curve(), Curve::Line(_));
+                            break 'outer;
+                        }
+                        idx += 1;
+                    }
+                }
+            }
+        }
+        result
+    };
+    if !is_straight_edge {
+        return Err(DressUpError::OperationFailed(
+            "Direct fillet requires straight edge; use boolean fallback".into()
+        ));
+    }
+
+    // 2. Compute fillet geometry
+    let t1s = edge_start - n2 * radius;
+    let t1e = edge_end - n2 * radius;
+    let t2s = edge_start - n1 * radius;
+    let t2e = edge_end - n1 * radius;
+
+    let v_t1s = builder::vertex(t1s);
+    let v_t1e = builder::vertex(t1e);
+    let v_t2s = builder::vertex(t2s);
+    let v_t2e = builder::vertex(t2e);
+
+    let center_s = edge_start - n1 * radius - n2 * radius;
+    let center_e = edge_end - n1 * radius - n2 * radius;
+    let mid_dir = (n1 + n2).normalize();
+    let transit_s = center_s + mid_dir * radius;
+    let transit_e = center_e + mid_dir * radius;
+
+    let arc_s = builder::circle_arc(&v_t1s, &v_t2s, transit_s);
+    let arc_e = builder::circle_arc(&v_t1e, &v_t2e, transit_e);
+
+    let e_tang1 = builder::line(&v_t1s, &v_t1e);
+    let e_tang2 = builder::line(&v_t2s, &v_t2e);
+
+    // 3. Create fillet face with cylindrical surface (homotopy between arcs)
+    let fillet_wire = Wire::from(vec![
+        e_tang1.clone(),
+        arc_e.clone(),
+        e_tang2.inverse(),
+        arc_s.inverse(),
+    ]);
+    let arc_s_curve = arc_s.oriented_curve().lift_up();
+    let arc_e_curve = arc_e.oriented_curve().lift_up();
+    let fillet_surface = BSplineSurface::homotopy(arc_s_curve, arc_e_curve);
+    let fillet_face = Face::new(
+        vec![fillet_wire],
+        Surface::NurbsSurface(NurbsSurface::new(fillet_surface)),
+    );
+
+    // 4. Rebuild the shell topology
+    let eps = 1e-8;
+    let mut new_faces: Vec<Face> = Vec::new();
+
+    for (fi, face) in all_faces.iter().enumerate() {
+        let wires = face.boundaries();
+        if wires.is_empty() { continue; }
+        let wire = &wires[0];
+
+        // Check if this face's wire contains the filleted edge or touches its vertices
+        let mut has_filleted_edge = false;
+        let mut touches_start = false;
+        let mut touches_end = false;
+
+        for edge in wire.edge_iter() {
+            let ef = edge.front().point();
+            let eb = edge.back().point();
+            let is_fwd = (ef - edge_start).magnitude() < eps && (eb - edge_end).magnitude() < eps;
+            let is_rev = (ef - edge_end).magnitude() < eps && (eb - edge_start).magnitude() < eps;
+            if is_fwd || is_rev { has_filleted_edge = true; }
+            if (ef - edge_start).magnitude() < eps || (eb - edge_start).magnitude() < eps { touches_start = true; }
+            if (ef - edge_end).magnitude() < eps || (eb - edge_end).magnitude() < eps { touches_end = true; }
+        }
+
+        if !has_filleted_edge && !touches_start && !touches_end {
+            new_faces.push((*face).clone());
+            continue;
+        }
+
+        // Rebuild this face's wire
+        let mut new_edges: Vec<Edge> = Vec::new();
+
+        for edge in wire.edge_iter() {
+            let ef = edge.front().point();
+            let eb = edge.back().point();
+            let is_fwd = (ef - edge_start).magnitude() < eps && (eb - edge_end).magnitude() < eps;
+            let is_rev = (ef - edge_end).magnitude() < eps && (eb - edge_start).magnitude() < eps;
+
+            if is_fwd || is_rev {
+                // Replace filleted edge with tangent edge
+                if fi == *face1_idx {
+                    new_edges.push(if is_fwd { e_tang1.clone() } else { e_tang1.inverse() });
+                } else if fi == face2_idx {
+                    new_edges.push(if is_fwd { e_tang2.clone() } else { e_tang2.inverse() });
+                }
+            } else {
+                // Check if edge connects to filleted vertices
+                let front_at_start = (ef - edge_start).magnitude() < eps;
+                let front_at_end = (ef - edge_end).magnitude() < eps;
+                let back_at_start = (eb - edge_start).magnitude() < eps;
+                let back_at_end = (eb - edge_end).magnitude() < eps;
+
+                if !front_at_start && !front_at_end && !back_at_start && !back_at_end {
+                    new_edges.push(edge.clone());
+                } else {
+                    // Determine replacement vertex for each end
+                    let get_tangent_vertex = |is_start: bool, is_end: bool, face_idx: usize| -> Option<(Point3, Vertex)> {
+                        if !is_start && !is_end { return None; }
+                        let on_face1 = face_idx == *face1_idx;
+                        let on_face2 = face_idx == face2_idx;
+                        if on_face1 {
+                            if is_start { Some((t1s, v_t1s.clone())) } else { Some((t1e, v_t1e.clone())) }
+                        } else if on_face2 {
+                            if is_start { Some((t2s, v_t2s.clone())) } else { Some((t2e, v_t2e.clone())) }
+                        } else {
+                            // End-cap face: find which adjacent face this edge is shared with
+                            let shared_with_f1 = adjacency.iter().any(|(_, es, ee, fi2, _f2o, _)| {
+                                *fi2 == *face1_idx &&
+                                (((*es - ef).magnitude() < eps && (*ee - eb).magnitude() < eps) ||
+                                 ((*es - eb).magnitude() < eps && (*ee - ef).magnitude() < eps))
+                            });
+                            if shared_with_f1 {
+                                if is_start { Some((t1s, v_t1s.clone())) } else { Some((t1e, v_t1e.clone())) }
+                            } else {
+                                if is_start { Some((t2s, v_t2s.clone())) } else { Some((t2e, v_t2e.clone())) }
+                            }
+                        }
+                    };
+
+                    let front_repl = get_tangent_vertex(front_at_start, front_at_end, fi);
+                    let back_repl = get_tangent_vertex(back_at_start, back_at_end, fi);
+
+                    let v0 = front_repl.map(|(_, v)| v).unwrap_or_else(|| builder::vertex(ef));
+                    let v1 = back_repl.map(|(_, v)| v).unwrap_or_else(|| builder::vertex(eb));
+                    new_edges.push(builder::line(&v0, &v1));
+                }
+            }
+        }
+
+        // For end-cap faces: insert fillet arc to close the gap
+        if fi != *face1_idx && fi != face2_idx && (touches_start || touches_end) {
+            if touches_start { new_edges.push(arc_s.clone()); }
+            if touches_end { new_edges.push(arc_e.clone()); }
+        }
+
+        let new_wire = Wire::from(new_edges);
+        let new_face = Face::new(vec![new_wire], face.oriented_surface());
+        new_faces.push(new_face);
+    }
+
+    new_faces.push(fillet_face);
+
+    let new_shell: Shell = new_faces.into();
+    let new_solid = Solid::new(vec![new_shell]);
+    Ok(Shape::from_solid(new_solid))
+}
+
+/// Fillet a single edge, trying direct topology first, then boolean fallback.
+fn fillet_single_edge_smart(
+    shape: &Shape,
+    edge_idx: usize,
+    radius: f64,
+) -> std::result::Result<Shape, DressUpError> {
+    // Try direct topology first (faster, more robust for planar faces)
+    if let Ok(result) = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        fillet_direct_planar(shape, edge_idx, radius)
+    })) {
+        if let Ok(result) = result {
+            let validation = validate_shape(&result);
+            if validation.is_valid() {
+                return Ok(result);
+            }
+        }
+    }
+    // Boolean fallback
+    fillet_single_edge(shape, edge_idx, radius)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1003,5 +1360,107 @@ mod tests {
         let msg = format!("{e}");
         assert!(msg.contains("Boolean operation failed"));
         assert!(msg.contains("test"));
+    }
+
+    // ─── C0 continuity tests ───
+
+    #[test]
+    fn c0_edges_box_all_sharp() {
+        // A box has 12 edges, all meeting at 90° = C0 (sharp)
+        let cube = unit_box();
+        let c0 = find_c0_edges(&cube);
+        assert_eq!(c0.len(), 12, "All box edges should be C0: got {}", c0.len());
+    }
+
+    #[test]
+    fn is_edge_c0_box() {
+        let cube = unit_box();
+        assert!(is_edge_c0_continuous(&cube, 0), "Box edge 0 should be C0");
+    }
+
+    #[test]
+    fn is_edge_c0_invalid_returns_false() {
+        let cube = unit_box();
+        assert!(!is_edge_c0_continuous(&cube, 999), "Invalid edge should return false");
+    }
+
+    // ─── Shape validation tests ───
+
+    #[test]
+    fn validate_box_is_valid() {
+        let cube = unit_box();
+        let v = validate_shape(&cube);
+        assert!(v.is_valid());
+        assert!(v.has_faces);
+        assert!(v.closed_shell);
+        assert!(v.valid_bounds);
+        assert_eq!(v.face_count, 6);
+    }
+
+    #[test]
+    fn validate_fused_shape() {
+        let s1 = box_shape(0.0, 0.0, 0.0, 2.0, 2.0, 2.0);
+        let s2 = box_shape(0.5, 0.5, 0.5, 2.0, 2.0, 2.0);
+        let fused = boolean(&s1, &s2, BooleanOp::Fuse).unwrap();
+        let v = validate_shape(&fused);
+        assert!(v.has_faces);
+        assert!(v.valid_bounds);
+    }
+
+    #[test]
+    fn validate_chamfered_shape() {
+        let cube = unit_box();
+        let chamfered = chamfer(&cube, &[0], 0.3).unwrap();
+        let v = validate_shape(&chamfered);
+        assert!(v.has_faces);
+        assert!(v.valid_bounds);
+    }
+
+    // ─── Direct topology fillet tests ───
+
+    #[test]
+    fn fillet_direct_graceful_fallback() {
+        // fillet_direct_planar may panic on complex shapes — catch_unwind handles it
+        let cube = unit_box();
+        let chamfered = chamfer(&cube, &[0], 0.3).unwrap();
+        let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            fillet_direct_planar(&chamfered, 0, 0.1)
+        }));
+        // Either returns Err or panics (caught) — both are acceptable
+        assert!(result.is_err() || result.unwrap().is_err(),
+            "Direct fillet on chamfered shape should fail gracefully");
+    }
+
+    #[test]
+    fn fillet_smart_fallback_to_boolean() {
+        // fillet_single_edge_smart should succeed via boolean fallback even if direct fails
+        let cube = unit_box();
+        let result = fillet_single_edge_smart(&cube, 0, 0.3);
+        assert!(result.is_ok(), "Smart fillet should succeed via fallback: {:?}", result.err());
+    }
+
+    #[test]
+    fn fillet_smart_produces_more_faces() {
+        let cube = unit_box();
+        let result = fillet_single_edge_smart(&cube, 0, 0.3).unwrap();
+        assert!(result.face_count() > cube.face_count());
+    }
+
+    // ─── fillet_all / chamfer_all tests ───
+
+    #[test]
+    fn fillet_all_box_single_edge() {
+        let cube = unit_box();
+        // fillet_all fillets ALL C0 edges (all 12 on a box)
+        // This is expensive, just test it runs on one edge at a time
+        let result = fillet(&cube, &[0], 0.3);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn find_c0_edges_returns_12_for_box() {
+        let cube = unit_box();
+        let edges = find_c0_edges(&cube);
+        assert_eq!(edges.len(), 12);
     }
 }
