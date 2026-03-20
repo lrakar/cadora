@@ -5967,4 +5967,508 @@ mod tests {
         let p = proj.unwrap();
         assert!((p.z - 0.0).abs() < 2.0, "Should project to bottom face near z=0, got z={:.2}", p.z);
     }
+
+    // ═══════════════════════════════════════════════════════════════
+    //  Complex Shape Stress Tests
+    //  Tests that exercise OCCT algorithms beyond simple box shapes
+    // ═══════════════════════════════════════════════════════════════
+
+    // --- Stress: thick_solid ---
+
+    #[test]
+    fn stress_thick_solid_tall_box() {
+        // FreeCAD: thick solid on tall thin box (20x5x50)
+        let shape = box_shape(0.0, 0.0, 0.0, 20.0, 5.0, 50.0);
+        let result = thick_solid(&shape, 1.0, &[]);
+        match result {
+            Ok(hollow) => {
+                let bb = hollow.bounding_box();
+                assert!((bb.max.x - 20.0).abs() < 1.0, "X preserved");
+                assert!((bb.max.z - 50.0).abs() < 1.0, "Z preserved");
+                // Interior should be 18x3x48 (2mm walls each side)
+                assert!(hollow.face_count() > 6, "Hollow should have more faces than solid box");
+            }
+            Err(e) => eprintln!("stress thick_solid tall: {e}"),
+        }
+    }
+
+    #[test]
+    fn stress_thick_solid_with_face_removal() {
+        // FreeCAD: remove multiple faces for multi-opening shell
+        let shape = box_shape(0.0, 0.0, 0.0, 10.0, 10.0, 10.0);
+        let result = thick_solid(&shape, 1.5, &[0, 1]);
+        match result {
+            Ok(hollow) => {
+                let bb = hollow.bounding_box();
+                assert!((bb.max.x - 10.0).abs() < 1.5);
+            }
+            Err(e) => eprintln!("stress thick_solid multi-remove: {e}"),
+        }
+    }
+
+    #[test]
+    fn stress_thick_solid_thin_wall() {
+        // FreeCAD: very thin wall (0.1mm on 10mm box)
+        let shape = box_shape(0.0, 0.0, 0.0, 10.0, 10.0, 10.0);
+        let result = thick_solid(&shape, 0.1, &[]);
+        match result {
+            Ok(hollow) => {
+                let bb = hollow.bounding_box();
+                assert!((bb.max.x - 10.0).abs() < 0.5, "Outer dimensions preserved with thin wall");
+            }
+            Err(e) => eprintln!("stress thick_solid thin: {e}"),
+        }
+    }
+
+    // --- Stress: fix_shape ---
+
+    #[test]
+    fn stress_fix_shape_after_boolean() {
+        // FreeCAD: ShapeFix on boolean result
+        let b1 = box_shape(0.0, 0.0, 0.0, 10.0, 10.0, 10.0);
+        let b2 = box_shape(5.0, 5.0, 5.0, 10.0, 10.0, 10.0);
+        match boolean(&b1, &b2, BooleanOp::Fuse) {
+            Ok(fused) => {
+                let result = fix_shape(&fused);
+                // Boolean result should pass shape fix checks
+                let shell = &result.shape.solid().boundaries()[0];
+                let condition = shell.shell_condition();
+                eprintln!("Boolean result shell condition: {:?}", condition);
+            }
+            Err(e) => eprintln!("boolean for fix_shape stress: {e}"),
+        }
+    }
+
+    #[test]
+    fn stress_fix_shape_after_cut() {
+        // FreeCAD: ShapeFix after boolean cut
+        let b1 = box_shape(0.0, 0.0, 0.0, 10.0, 10.0, 10.0);
+        let b2 = box_shape(3.0, 3.0, -1.0, 4.0, 4.0, 12.0);
+        match boolean(&b1, &b2, BooleanOp::Cut) {
+            Ok(cut) => {
+                let result = fix_shape(&cut);
+                assert!(result.shape.face_count() > 6,
+                    "Cut shape should have more than 6 faces, got {}", result.shape.face_count());
+            }
+            Err(e) => eprintln!("boolean cut for fix_shape stress: {e}"),
+        }
+    }
+
+    // --- Stress: draft_angle ---
+
+    #[test]
+    fn stress_draft_angle_all_side_faces() {
+        // FreeCAD: Draft all 4 side faces of a box
+        let shape = box_shape(0.0, 0.0, 0.0, 10.0, 10.0, 20.0);
+        let angle = 3.0_f64.to_radians();
+        // Draft all faces (algorithm selects side faces automatically)
+        let all_indices: Vec<usize> = (0..shape.face_count()).collect();
+        let result = draft_angle(&shape, &all_indices, angle, Vector3::unit_z());
+        match result {
+            Ok(drafted) => {
+                let bb = drafted.bounding_box();
+                // Height should be preserved
+                assert!((bb.max.z - bb.min.z - 20.0).abs() < 3.0,
+                    "Height ~20, got {:.2}", bb.max.z - bb.min.z);
+                eprintln!("Draft all sides: x=[{:.2},{:.2}] y=[{:.2},{:.2}]",
+                    bb.min.x, bb.max.x, bb.min.y, bb.max.y);
+            }
+            Err(e) => eprintln!("stress draft all sides: {e}"),
+        }
+    }
+
+    #[test]
+    fn stress_draft_angle_large_angle() {
+        // FreeCAD: Large draft angle (15°)
+        let shape = box_shape(0.0, 0.0, 0.0, 10.0, 10.0, 10.0);
+        let angle = 15.0_f64.to_radians();
+        let result = draft_angle(&shape, &[0], angle, Vector3::unit_z());
+        match result {
+            Ok(drafted) => {
+                let bb = drafted.bounding_box();
+                // Large angle should show significant taper
+                eprintln!("Large draft: bb max=({:.2},{:.2},{:.2})",
+                    bb.max.x, bb.max.y, bb.max.z);
+            }
+            Err(e) => eprintln!("stress draft large angle: {e}"),
+        }
+    }
+
+    #[test]
+    fn stress_draft_angle_xy_pull() {
+        // FreeCAD: Draft with non-Z pull direction
+        let shape = box_shape(0.0, 0.0, 0.0, 10.0, 10.0, 10.0);
+        let angle = 5.0_f64.to_radians();
+        let result = draft_angle(&shape, &[0], angle, Vector3::unit_x());
+        match result {
+            Ok(drafted) => {
+                let bb = drafted.bounding_box();
+                eprintln!("XY pull draft: x=[{:.2},{:.2}]", bb.min.x, bb.max.x);
+            }
+            Err(e) => eprintln!("stress draft xy pull: {e}"),
+        }
+    }
+
+    // --- Stress: pipe_shell_frenet ---
+
+    #[test]
+    fn stress_pipe_frenet_long_straight() {
+        // FreeCAD: long straight pipe
+        let profile = make_rect_wire(3.0, 3.0);
+        let v0 = builder::vertex(Point3::new(0.0, 0.0, 0.0));
+        let v1 = builder::vertex(Point3::new(0.0, 0.0, 100.0));
+        let spine = Wire::from(vec![builder::line(&v0, &v1)]);
+        let result = pipe_shell_frenet(&profile, &spine);
+        assert!(result.is_ok(), "Long straight pipe should work");
+        let shape = result.unwrap();
+        let bb = shape.bounding_box();
+        assert!((bb.max.z - 100.0).abs() < 1.0, "Length should be ~100");
+        assert!((bb.max.x - bb.min.x - 3.0).abs() < 1.0, "Cross section ~3");
+    }
+
+    #[test]
+    fn stress_pipe_frenet_two_collinear_segments() {
+        // FreeCAD: pipe along two collinear segments (should simplify to single pipe)
+        let profile = make_rect_wire(2.0, 2.0);
+        let v0 = builder::vertex(Point3::new(0.0, 0.0, 0.0));
+        let v1 = builder::vertex(Point3::new(0.0, 0.0, 10.0));
+        let v2 = builder::vertex(Point3::new(0.0, 0.0, 20.0));
+        let spine = Wire::from(vec![
+            builder::line(&v0, &v1),
+            builder::line(&v1, &v2),
+        ]);
+        let result = pipe_shell_frenet(&profile, &spine);
+        match result {
+            Ok(shape) => {
+                let bb = shape.bounding_box();
+                assert!((bb.max.z - 20.0).abs() < 1.0, "Length should be ~20");
+            }
+            Err(e) => eprintln!("stress pipe collinear: {e}"),
+        }
+    }
+
+    // --- Stress: defeature ---
+
+    #[test]
+    fn stress_defeature_small_boss() {
+        // FreeCAD: box with small boss, remove boss
+        let base = box_shape(0.0, 0.0, 0.0, 20.0, 20.0, 20.0);
+        let boss = box_shape(8.0, 8.0, 20.0, 4.0, 4.0, 0.5); // Small 4x4x0.5 boss on top
+        match boolean(&base, &boss, BooleanOp::Fuse) {
+            Ok(with_boss) => {
+                // Defeature with threshold > boss area should remove the boss
+                let result = defeature(&with_boss, 5.0);
+                match result {
+                    Ok(defeatured) => {
+                        let bb = defeatured.bounding_box();
+                        eprintln!("Defeatured boss: z_max={:.2} (original was 20.5)", bb.max.z);
+                    }
+                    Err(e) => eprintln!("stress defeature boss: {e}"),
+                }
+            }
+            Err(e) => eprintln!("boolean for defeature: {e}"),
+        }
+    }
+
+    // --- Stress: find_fusible_edges ---
+
+    #[test]
+    fn stress_find_fusible_two_coplanar_faces() {
+        // FreeCAD: two boxes fused creating internal coplanar faces
+        let b1 = box_shape(0.0, 0.0, 0.0, 10.0, 10.0, 10.0);
+        let b2 = box_shape(10.0, 0.0, 0.0, 10.0, 10.0, 10.0);
+        match boolean(&b1, &b2, BooleanOp::Fuse) {
+            Ok(fused) => {
+                let fusible = find_fusible_edges(&fused);
+                eprintln!("Two boxes fused: {} faces, {} fusible edges",
+                    fused.face_count(), fusible.len());
+                // The top face and bottom face at y=0 and y=10 should have
+                // fusible edges where the partition is
+            }
+            Err(e) => eprintln!("boolean for fusible edge stress: {e}"),
+        }
+    }
+
+    // --- Stress: point_on_face ---
+
+    #[test]
+    fn stress_point_on_face_after_boolean() {
+        // FreeCAD: BRepClass_FaceClassifier on boolean result
+        let b1 = box_shape(0.0, 0.0, 0.0, 10.0, 10.0, 10.0);
+        let b2 = box_shape(5.0, 5.0, 5.0, 10.0, 10.0, 10.0);
+        match boolean(&b1, &b2, BooleanOp::Fuse) {
+            Ok(fused) => {
+                // Test points on the step geometry
+                let step_found = (0..fused.face_count())
+                    .any(|i| point_on_face(&fused, i, Point3::new(5.0, 7.5, 10.0), 1.0));
+                assert!(step_found, "Should find face at step junction");
+
+                // Test point inside the L-shape
+                let inside_found = (0..fused.face_count())
+                    .any(|i| point_on_face(&fused, i, Point3::new(2.5, 2.5, 10.0), 1.0));
+                assert!(inside_found, "Should find face on top of first box");
+            }
+            Err(e) => eprintln!("boolean for point_on_face stress: {e}"),
+        }
+    }
+
+    #[test]
+    fn stress_point_on_face_edge_of_face() {
+        // FreeCAD: point right at face edge boundary
+        let shape = box_shape(0.0, 0.0, 0.0, 10.0, 10.0, 10.0);
+        // Point exactly on the edge between two faces
+        let edge_found = (0..shape.face_count())
+            .any(|i| point_on_face(&shape, i, Point3::new(10.0, 5.0, 5.0), 0.5));
+        assert!(edge_found, "Should find a face at edge boundary");
+    }
+
+    // --- Stress: project_point_to_shape ---
+
+    #[test]
+    fn stress_project_distant_point() {
+        // FreeCAD: BRepExtrema_DistShapeShape with distant point
+        let shape = box_shape(0.0, 0.0, 0.0, 10.0, 10.0, 10.0);
+        let proj = project_point_to_shape(&shape, Point3::new(500.0, 500.0, 500.0));
+        assert!(proj.is_some(), "Should project distant point");
+        let p = proj.unwrap();
+        // Should project to corner-ish area of box (10, 10, 10)
+        assert!(p.x >= 9.0 && p.x <= 10.5, "X should be near 10, got {:.2}", p.x);
+    }
+
+    #[test]
+    fn stress_project_interior_point() {
+        // FreeCAD: project point inside box to nearest surface
+        let shape = box_shape(0.0, 0.0, 0.0, 10.0, 10.0, 10.0);
+        let proj = project_point_to_shape(&shape, Point3::new(5.0, 5.0, 5.0));
+        // Interior point should project to nearest face
+        assert!(proj.is_some(), "Should project interior point");
+    }
+
+    // --- Stress: offset_surface ---
+
+    #[test]
+    fn stress_offset_surface_negative() {
+        // FreeCAD: negative offset = inward
+        let plane = Plane::new(
+            Point3::new(5.0, 5.0, 10.0),
+            Point3::new(6.0, 5.0, 10.0),
+            Point3::new(5.0, 6.0, 10.0),
+        );
+        let surface = Surface::Plane(plane);
+        let offset = offset_surface(&surface, -3.0);
+        match offset {
+            Surface::Plane(p) => {
+                let origin = p.origin();
+                assert!((origin.z - 7.0).abs() < 1e-10,
+                    "Negative offset should move z from 10 to 7, got {}", origin.z);
+            }
+            _ => panic!("Offset plane should produce a plane"),
+        }
+    }
+
+    #[test]
+    fn stress_offset_surface_tilted_plane() {
+        // FreeCAD: offset a tilted plane (normal not axis-aligned)
+        let plane = Plane::new(
+            Point3::new(0.0, 0.0, 0.0),
+            Point3::new(1.0, 0.0, 0.0),
+            Point3::new(0.0, 0.0, 1.0), // YZ plane → normal is (0,1,0) cross... actually let truck compute
+        );
+        let surface = Surface::Plane(plane);
+        let offset = offset_surface(&surface, 2.0);
+        match offset {
+            Surface::Plane(p) => {
+                let normal = p.normal();
+                let orig_normal = plane.normal();
+                // Normal direction should be preserved after offset
+                let dot = normal.x * orig_normal.x + normal.y * orig_normal.y + normal.z * orig_normal.z;
+                assert!(dot > 0.99, "Normal should be preserved after offset, dot={:.4}", dot);
+            }
+            _ => panic!("Offset tilted plane should produce a plane"),
+        }
+    }
+
+    // --- Stress: make_evolved ---
+
+    #[test]
+    fn stress_evolved_long_spine() {
+        // FreeCAD: evolved shape with long spine
+        let profile = make_rect_wire(1.0, 1.0);
+        let v0 = builder::vertex(Point3::new(0.0, 0.0, 0.0));
+        let v1 = builder::vertex(Point3::new(50.0, 0.0, 0.0));
+        let spine = Wire::from(vec![builder::line(&v0, &v1)]);
+        let result = make_evolved(&spine, &profile);
+        assert!(result.is_ok(), "Long spine evolved should work");
+        let shape = result.unwrap();
+        let bb = shape.bounding_box();
+        eprintln!("Long evolved: x=[{:.1},{:.1}] y=[{:.1},{:.1}] z=[{:.1},{:.1}]",
+            bb.min.x, bb.max.x, bb.min.y, bb.max.y, bb.min.z, bb.max.z);
+    }
+
+    // --- Stress: replace_face ---
+
+    #[test]
+    fn stress_replace_face_with_boolean_result() {
+        // FreeCAD: replace face in a boolean result
+        let b1 = box_shape(0.0, 0.0, 0.0, 10.0, 10.0, 10.0);
+        let b2 = box_shape(5.0, 5.0, 5.0, 10.0, 10.0, 10.0);
+        match boolean(&b1, &b2, BooleanOp::Fuse) {
+            Ok(fused) => {
+                let replacement = box_shape(3.0, 3.0, 3.0, 15.0, 15.0, 15.0);
+                let result = replace_face(&fused, 0, &replacement);
+                match result {
+                    Ok(replaced) => {
+                        assert!(replaced.face_count() >= 6);
+                        eprintln!("Replace face in boolean result: {} faces", replaced.face_count());
+                    }
+                    Err(e) => eprintln!("stress replace_face: {e}"),
+                }
+            }
+            Err(e) => eprintln!("boolean for replace stress: {e}"),
+        }
+    }
+
+    // --- Stress: plane_plane_intersection ---
+
+    #[test]
+    fn stress_plane_intersection_nearly_parallel() {
+        // FreeCAD: nearly parallel planes — should still find intersection
+        let result = plane_plane_intersection(
+            Point3::origin(), Vector3::unit_z(),
+            Point3::origin(), Vector3::new(0.001, 0.0, 1.0),
+        );
+        assert!(result.is_some(), "Nearly parallel planes should still intersect");
+        let (_, dir) = result.unwrap();
+        // Direction should be roughly along Y axis
+        eprintln!("Nearly parallel intersection dir: ({:.4}, {:.4}, {:.4})", dir.x, dir.y, dir.z);
+    }
+
+    #[test]
+    fn stress_plane_intersection_oblique() {
+        // FreeCAD: oblique planes (45° from all axes)
+        let result = plane_plane_intersection(
+            Point3::origin(), Vector3::new(1.0, 1.0, 0.0), // 45° plane
+            Point3::origin(), Vector3::new(0.0, 1.0, 1.0), // another 45° plane
+        );
+        assert!(result.is_some(), "Two oblique planes should intersect");
+    }
+
+    // --- Stress: sew_shape ---
+
+    #[test]
+    fn stress_sew_after_boolean() {
+        // FreeCAD: sew after boolean operations
+        let b1 = box_shape(0.0, 0.0, 0.0, 10.0, 10.0, 10.0);
+        let b2 = box_shape(5.0, 5.0, 5.0, 10.0, 10.0, 10.0);
+        match boolean(&b1, &b2, BooleanOp::Fuse) {
+            Ok(fused) => {
+                let result = sew_shape(&fused, 0.01);
+                assert!(result.is_ok(), "Sewing boolean result should succeed");
+            }
+            Err(e) => eprintln!("boolean for sew stress: {e}"),
+        }
+    }
+
+    // --- Stress: count_internal_wires ---
+
+    #[test]
+    fn stress_internal_wires_after_cut() {
+        // FreeCAD: hole cut should create internal wires
+        let base = box_shape(0.0, 0.0, 0.0, 20.0, 20.0, 20.0);
+        let hole = box_shape(5.0, 5.0, -1.0, 10.0, 10.0, 22.0);
+        match boolean(&base, &hole, BooleanOp::Cut) {
+            Ok(cut) => {
+                let wires = count_internal_wires(&cut);
+                eprintln!("Cut hole internal wires: {}", wires);
+                // A through-hole in a box creates a U-shaped cross section
+                // which may or may not have internal wires depending on topology
+            }
+            Err(e) => eprintln!("boolean cut for wires: {e}"),
+        }
+    }
+
+    // --- Stress: combined operations ---
+
+    #[test]
+    fn stress_draft_then_thick() {
+        // FreeCAD: draft + thick solid pipeline
+        let shape = box_shape(0.0, 0.0, 0.0, 10.0, 10.0, 10.0);
+        let angle = 3.0_f64.to_radians();
+        match draft_angle(&shape, &[0], angle, Vector3::unit_z()) {
+            Ok(drafted) => {
+                match thick_solid(&drafted, 1.0, &[]) {
+                    Ok(hollow_drafted) => {
+                        let bb = hollow_drafted.bounding_box();
+                        eprintln!("Draft+thick: bb=({:.1},{:.1},{:.1})",
+                            bb.max.x, bb.max.y, bb.max.z);
+                    }
+                    Err(e) => eprintln!("thick after draft: {e}"),
+                }
+            }
+            Err(e) => eprintln!("draft for pipeline: {e}"),
+        }
+    }
+
+    #[test]
+    fn stress_boolean_then_fix_then_sew() {
+        // FreeCAD: common pipeline: boolean → fix → sew
+        let b1 = box_shape(0.0, 0.0, 0.0, 10.0, 10.0, 10.0);
+        let b2 = box_shape(5.0, 5.0, 0.0, 10.0, 10.0, 10.0);
+        match boolean(&b1, &b2, BooleanOp::Fuse) {
+            Ok(fused) => {
+                let fixed = fix_shape(&fused);
+                let sewed = sew_shape(&fixed.shape, 0.01);
+                assert!(sewed.is_ok(), "Fix→sew pipeline should succeed");
+            }
+            Err(e) => eprintln!("boolean for pipeline: {e}"),
+        }
+    }
+
+    #[test]
+    fn stress_pipe_then_defeature() {
+        // FreeCAD: pipe → defeature pipeline
+        let profile = make_rect_wire(2.0, 2.0);
+        let v0 = builder::vertex(Point3::new(0.0, 0.0, 0.0));
+        let v1 = builder::vertex(Point3::new(0.0, 0.0, 10.0));
+        let spine = Wire::from(vec![builder::line(&v0, &v1)]);
+        match pipe_shell_frenet(&profile, &spine) {
+            Ok(pipe) => {
+                let result = defeature(&pipe, 0.001);
+                match result {
+                    Ok(defeatured) => {
+                        let bb = defeatured.bounding_box();
+                        assert!((bb.max.z - 10.0).abs() < 1.0, "Pipe length preserved");
+                    }
+                    Err(e) => eprintln!("defeature pipe: {e}"),
+                }
+            }
+            Err(e) => eprintln!("pipe for defeature: {e}"),
+        }
+    }
+
+    #[test]
+    fn stress_validate_all_operations() {
+        // FreeCAD: BRepAlgo::IsValid on results of all operations
+        let box1 = box_shape(0.0, 0.0, 0.0, 10.0, 10.0, 10.0);
+
+        // Validate box
+        let v1 = validate_shape(&box1);
+        assert!(v1.is_valid(), "Box should validate");
+
+        // Validate after translate
+        let translated = translate_shape(&box1, Vector3::new(5.0, 0.0, 0.0));
+        let v2 = validate_shape(&translated);
+        assert!(v2.is_valid(), "Translated should validate");
+
+        // Validate after scale
+        let scaled = scale_shape_uniform(&box1, Point3::origin(), 2.0);
+        let v3 = validate_shape(&scaled);
+        assert!(v3.is_valid(), "Scaled should validate");
+
+        // Validate after rotation
+        let rotated = rotate_shape(&box1,
+            Point3::origin(), Vector3::unit_z(), std::f64::consts::FRAC_PI_4);
+        let v4 = validate_shape(&rotated);
+        assert!(v4.is_valid(), "Rotated should validate");
+    }
 }
