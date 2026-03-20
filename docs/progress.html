@@ -899,6 +899,27 @@
   </div>
 </div>
 
+<!-- ==================== I ==================== -->
+<div class="phase">
+  <div class="phase-header" onclick="this.parentElement.classList.toggle('open')">
+    <h3><span class="arrow">&#9654;</span> I &mdash; GUI &amp; 3D Viewport <span class="phase-badge badge-progress">In Progress</span></h3>
+    <span class="phase-pct">1 / 8</span>
+  </div>
+  <div class="phase-body">
+    <table>
+      <tr><th></th><th>Task</th><th>Crate / Stack</th><th>Description</th></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>Main window / layout &amp; project scaffold</td><td><span class="crate-tag">cadora-ui</span> Tauri v2 + React + Three.js</td><td class="source-ref">Tauri v2 app with Vite + React + TypeScript + TailwindCSS. Fusion 360-style dark theme. Toolbar ribbon, model tree, property panel, 3D viewport, status bar. Rust backend with Tauri commands (create_box, create_cylinder). Full build produces MSI/NSIS installer.</td></tr>
+      <tr><td><span class="pending">&#9744;</span></td><td>3D viewport with orbit / pan / zoom</td><td><span class="crate-tag">cadora-ui</span> Three.js</td><td class="source-ref">OrbitControls, grid, axes, lighting, shadow</td></tr>
+      <tr><td><span class="pending">&#9744;</span></td><td>Model tree / hierarchy view</td><td><span class="crate-tag">cadora-ui</span> React</td><td class="source-ref">Expandable tree with type icons, selection</td></tr>
+      <tr><td><span class="pending">&#9744;</span></td><td>Property panel</td><td><span class="crate-tag">cadora-ui</span> React</td><td class="source-ref">Properties inspector, placement, parameters</td></tr>
+      <tr><td><span class="pending">&#9744;</span></td><td>Sketcher 2D overlay</td><td><span class="crate-tag">cadora-ui</span></td><td class="source-ref">2D sketch mode in viewport</td></tr>
+      <tr><td><span class="pending">&#9744;</span></td><td>Feature editing dialogs</td><td><span class="crate-tag">cadora-ui</span></td><td class="source-ref">Pad, pocket, fillet, chamfer parameter dialogs</td></tr>
+      <tr><td><span class="pending">&#9744;</span></td><td>Selection highlighting</td><td><span class="crate-tag">cadora-ui</span></td><td class="source-ref">Ray picking + highlight in viewport</td></tr>
+      <tr><td><span class="pending">&#9744;</span></td><td>Status bar / coordinate display</td><td><span class="crate-tag">cadora-ui</span></td><td class="source-ref">Cursor coordinates, selection info, units</td></tr>
+    </table>
+  </div>
+</div>
+
 </div><!-- /container -->
 
 <footer>

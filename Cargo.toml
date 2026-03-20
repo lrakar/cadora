@@ -14,6 +14,7 @@ members = [
     "crates/cadora-brep",
     "crates/cadora-partdesign",
     "crates/cadora-io",
+    "cadora-ui/src-tauri",
 ]
 
 [workspace.package]
