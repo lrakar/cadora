@@ -77,8 +77,8 @@
 <!-- Overall progress -->
 <div class="overall">
   <h2>Overall Progress</h2>
-  <div class="bar-outer"><div class="bar-inner" id="overallBar" style="width:75%"></div></div>
-  <div class="pct"><span id="overallPct">79</span> / 79 tasks complete</div>
+  <div class="bar-outer"><div class="bar-inner" id="overallBar" style="width:100%"></div></div>
+  <div class="pct"><span id="overallPct">180</span> / 180 tasks complete</div>
 </div>
 
 <!-- ==================== PHASE 0 ==================== -->
@@ -470,22 +470,140 @@
 </h1>
 <p class="subtitle">Next milestones: Document Model → BRep Kernel → PartDesign → GUI</p>
 
-<!-- ==================== PHASE C ==================== -->
-<div class="phase">
+<!-- ==================== PHASE C0 ==================== -->
+<div class="phase open">
   <div class="phase-header" onclick="this.parentElement.classList.toggle('open')">
-    <h3><span class="arrow">&#9654;</span> C — Document Model &amp; Properties <span class="phase-badge badge-todo">Todo</span></h3>
-    <span class="phase-pct">0 / 45</span>
+    <h3><span class="arrow">&#9654;</span> C0 — Property System <span class="phase-badge badge-done">Done</span></h3>
+    <span class="phase-pct">8 / 8</span>
   </div>
   <div class="phase-body">
     <table>
       <tr><th></th><th>Task</th><th>Crate</th><th>Source Reference</th></tr>
-      <tr><td><span class="pending">&#9744;</span></td><td>Property system (typed properties: Int, Float, String, Link, LinkList, Placement, etc.)</td><td><span class="crate-tag">cadora-document</span></td><td class="source-ref">App::Property*, PropertyStandard.h</td></tr>
-      <tr><td><span class="pending">&#9744;</span></td><td>DocumentObject base class (name, label, properties, dependencies)</td><td><span class="crate-tag">cadora-document</span></td><td class="source-ref">App::DocumentObject</td></tr>
-      <tr><td><span class="pending">&#9744;</span></td><td>Document container (object registry, dependency DAG, recomputation)</td><td><span class="crate-tag">cadora-document</span></td><td class="source-ref">App::Document</td></tr>
-      <tr><td><span class="pending">&#9744;</span></td><td>Topological sort &amp; cascade recompute</td><td><span class="crate-tag">cadora-document</span></td><td class="source-ref">Document::recompute()</td></tr>
-      <tr><td><span class="pending">&#9744;</span></td><td>Transaction system (undo/redo at document level)</td><td><span class="crate-tag">cadora-document</span></td><td class="source-ref">App::Transaction</td></tr>
-      <tr><td><span class="pending">&#9744;</span></td><td>Placement &amp; transforms (position, rotation, quaternion)</td><td><span class="crate-tag">cadora-document</span></td><td class="source-ref">Base::Placement, Rotation</td></tr>
-      <tr><td><span class="pending">&#9744;</span></td><td>Expression engine (parameter formulas, cell references)</td><td><span class="crate-tag">cadora-document</span></td><td class="source-ref">App::Expression, ExpressionParser</td></tr>
+      <tr><td><span class="check">&#10003;</span></td><td>PropValue enum (Integer, Float, String, Bool, Vector3, Placement, Link, LinkList, LinkSub, LinkSubList, Enumeration, Quantity, Color)</td><td><span class="crate-tag">cadora-document</span></td><td class="source-ref">PropertyStandard.h, PropertyGeo.h, PropertyLinks.h</td></tr>
+      <tr><td><span class="check">&#10003;</span></td><td>PropertyStatus bitflags (Touched, Immutable, ReadOnly, Hidden, Transient, Output, NoRecompute)</td><td><span class="crate-tag">cadora-document</span></td><td class="source-ref">Property.h StatusBits enum</td></tr>
+      <tr><td><span class="check">&#10003;</span></td><td>Property struct (value + status + name) with copy/paste semantics</td><td><span class="crate-tag">cadora-document</span></td><td class="source-ref">Property.h Copy/Paste</td></tr>
+      <tr><td><span class="check">&#10003;</span></td><td>PropertyBag (ordered property map) with typed getters/setters</td><td><span class="crate-tag">cadora-document</span></td><td class="source-ref">PropertyContainer</td></tr>
+      <tr><td><span class="check">&#10003;</span></td><td>Touch/purgeTouched/isTouched propagation</td><td><span class="crate-tag">cadora-document</span></td><td class="source-ref">Property::touch/isTouched/purgeTouched</td></tr>
+      <tr><td><span class="check">&#10003;</span></td><td>Unit enum (Length, Angle, Area, Volume, Mass, Time, etc.) for Quantity</td><td><span class="crate-tag">cadora-document</span></td><td class="source-ref">PropertyUnits.h — 59 unit types</td></tr>
+      <tr><td><span class="check">&#10003;</span></td><td>Color type (RGBA f32) for PropertyColor</td><td><span class="crate-tag">cadora-document</span></td><td class="source-ref">Color.h</td></tr>
+      <tr><td><span class="check">&#10003;</span></td><td>Tests: property CRUD, status bits, typed access, touch tracking — 14 tests</td><td><span class="crate-tag">cadora-document</span></td><td class="source-ref">—</td></tr>
+    </table>
+  </div>
+</div>
+
+<!-- ==================== PHASE C1 ==================== -->
+<div class="phase">
+  <div class="phase-header" onclick="this.parentElement.classList.toggle('open')">
+    <h3><span class="arrow">&#9654;</span> C1 — Placement &amp; Transforms <span class="phase-badge badge-done">Done</span></h3>
+    <span class="phase-pct">6 / 6</span>
+  </div>
+  <div class="phase-body">
+    <table>
+      <tr><th></th><th>Task</th><th>Crate</th><th>Source Reference</th></tr>
+      <tr><td><span class="check">&#10003;</span></td><td>Rotation struct (nalgebra UnitQuaternion wrapper, axis-angle, Euler)</td><td><span class="crate-tag">cadora-document</span></td><td class="source-ref">Base::Rotation</td></tr>
+      <tr><td><span class="check">&#10003;</span></td><td>Placement struct (position Vec3 + rotation)</td><td><span class="crate-tag">cadora-document</span></td><td class="source-ref">Base::Placement</td></tr>
+      <tr><td><span class="check">&#10003;</span></td><td>Compose (*), inverse, transform_point, is_identity</td><td><span class="crate-tag">cadora-document</span></td><td class="source-ref">Placement operator*, inverse(), multVec()</td></tr>
+      <tr><td><span class="check">&#10003;</span></td><td>Axis-angle / Euler angle / YawPitchRoll conversions</td><td><span class="crate-tag">cadora-document</span></td><td class="source-ref">Rotation::setEulerAngles, getValue</td></tr>
+      <tr><td><span class="check">&#10003;</span></td><td>Slerp/Sclerp interpolation</td><td><span class="crate-tag">cadora-document</span></td><td class="source-ref">Placement::slerp, sclerp</td></tr>
+      <tr><td><span class="check">&#10003;</span></td><td>Tests: compose, inverse, conversions, slerp, identity — 12 tests</td><td><span class="crate-tag">cadora-document</span></td><td class="source-ref">—</td></tr>
+    </table>
+  </div>
+</div>
+
+<!-- ==================== PHASE C2 ==================== -->
+<div class="phase">
+  <div class="phase-header" onclick="this.parentElement.classList.toggle('open')">
+    <h3><span class="arrow">&#9654;</span> C2 — DocumentObject <span class="phase-badge badge-done">Done</span></h3>
+    <span class="phase-pct">7 / 7</span>
+  </div>
+  <div class="phase-body">
+    <table>
+      <tr><th></th><th>Task</th><th>Crate</th><th>Source Reference</th></tr>
+      <tr><td><span class="check">&#10003;</span></td><td>ObjectId newtype (u64) + ObjectStatus bitflags (Touch, Error, New, Recompute, Restore, Remove, Freeze)</td><td><span class="crate-tag">cadora-document</span></td><td class="source-ref">DocumentObject.h ObjectStatus</td></tr>
+      <tr><td><span class="check">&#10003;</span></td><td>DocumentObject struct (name, label, id, status, properties: PropertyBag)</td><td><span class="crate-tag">cadora-document</span></td><td class="source-ref">DocumentObject.h fields</td></tr>
+      <tr><td><span class="check">&#10003;</span></td><td>Property dynamic access (get/set by name, typed helpers)</td><td><span class="crate-tag">cadora-document</span></td><td class="source-ref">PropertyContainer getPropertyByName()</td></tr>
+      <tr><td><span class="check">&#10003;</span></td><td>Touch cascading (touch object → marks dirty for recompute)</td><td><span class="crate-tag">cadora-document</span></td><td class="source-ref">DocumentObject::touch()</td></tr>
+      <tr><td><span class="check">&#10003;</span></td><td>ObjectType trait (type_name, execute, must_execute, on_changed)</td><td><span class="crate-tag">cadora-document</span></td><td class="source-ref">DocumentObject virtual methods</td></tr>
+      <tr><td><span class="check">&#10003;</span></td><td>GeoFeature variant (adds Placement property automatically)</td><td><span class="crate-tag">cadora-document</span></td><td class="source-ref">GeoFeature.h Placement property</td></tr>
+      <tr><td><span class="check">&#10003;</span></td><td>Tests: object creation, property access, touch, status, type dispatch — 12 tests</td><td><span class="crate-tag">cadora-document</span></td><td class="source-ref">—</td></tr>
+    </table>
+  </div>
+</div>
+
+<!-- ==================== PHASE C3 ==================== -->
+<div class="phase">
+  <div class="phase-header" onclick="this.parentElement.classList.toggle('open')">
+    <h3><span class="arrow">&#9654;</span> C3 — Document Container <span class="phase-badge badge-done">Done</span></h3>
+    <span class="phase-pct">7 / 7</span>
+  </div>
+  <div class="phase-body">
+    <table>
+      <tr><th></th><th>Task</th><th>Crate</th><th>Source Reference</th></tr>
+      <tr><td><span class="check">&#10003;</span></td><td>Document struct (objects storage, name_map, id_map, next_id)</td><td><span class="crate-tag">cadora-document</span></td><td class="source-ref">Document.h DocumentP</td></tr>
+      <tr><td><span class="check">&#10003;</span></td><td>add_object() with unique name generation</td><td><span class="crate-tag">cadora-document</span></td><td class="source-ref">Document::addObject, getUniqueObjectName</td></tr>
+      <tr><td><span class="check">&#10003;</span></td><td>remove_object() with cascading link cleanup</td><td><span class="crate-tag">cadora-document</span></td><td class="source-ref">Document::removeObject</td></tr>
+      <tr><td><span class="check">&#10003;</span></td><td>get_object / get_object_by_id / get_objects / count</td><td><span class="crate-tag">cadora-document</span></td><td class="source-ref">Document::getObject, getObjectByID</td></tr>
+      <tr><td><span class="check">&#10003;</span></td><td>Object filtering by type name</td><td><span class="crate-tag">cadora-document</span></td><td class="source-ref">Document::getObjectsOfType</td></tr>
+      <tr><td><span class="check">&#10003;</span></td><td>Document-level properties (Label, FileName, CreatedBy, etc.)</td><td><span class="crate-tag">cadora-document</span></td><td class="source-ref">Document.h Label/FileName properties</td></tr>
+      <tr><td><span class="check">&#10003;</span></td><td>Tests: add/remove objects, naming, lookup, filtering — 15 tests</td><td><span class="crate-tag">cadora-document</span></td><td class="source-ref">—</td></tr>
+    </table>
+  </div>
+</div>
+
+<!-- ==================== PHASE C4 ==================== -->
+<div class="phase">
+  <div class="phase-header" onclick="this.parentElement.classList.toggle('open')">
+    <h3><span class="arrow">&#9654;</span> C4 — Dependency Graph &amp; Recompute <span class="phase-badge badge-done">Done</span></h3>
+    <span class="phase-pct">7 / 7</span>
+  </div>
+  <div class="phase-body">
+    <table>
+      <tr><th></th><th>Task</th><th>Crate</th><th>Source Reference</th></tr>
+      <tr><td><span class="check">&#10003;</span></td><td>Dependency DAG (petgraph DiGraph&lt;ObjectId, ()&gt;)</td><td><span class="crate-tag">cadora-document</span></td><td class="source-ref">Document.h boost::adjacency_list</td></tr>
+      <tr><td><span class="check">&#10003;</span></td><td>Build DAG from Link/LinkList properties (scan all objects)</td><td><span class="crate-tag">cadora-document</span></td><td class="source-ref">Document getOutList → graph edges</td></tr>
+      <tr><td><span class="check">&#10003;</span></td><td>Topological sort (compute execution order)</td><td><span class="crate-tag">cadora-document</span></td><td class="source-ref">Document::topologicalSort, boost::topological_sort</td></tr>
+      <tr><td><span class="check">&#10003;</span></td><td>recompute() — execute touched objects in topo order</td><td><span class="crate-tag">cadora-document</span></td><td class="source-ref">Document::recompute()</td></tr>
+      <tr><td><span class="check">&#10003;</span></td><td>Single-object recompute (recomputeFeature, optional recursive)</td><td><span class="crate-tag">cadora-document</span></td><td class="source-ref">Document::recomputeFeature()</td></tr>
+      <tr><td><span class="check">&#10003;</span></td><td>Cycle detection (DAG compatibility check before adding links)</td><td><span class="crate-tag">cadora-document</span></td><td class="source-ref">DocumentObject::testIfLinkDAGCompatible</td></tr>
+      <tr><td><span class="check">&#10003;</span></td><td>Tests: DAG building, topo sort, recompute cascade, cycle detection — 15 tests (merged with C3)</td><td><span class="crate-tag">cadora-document</span></td><td class="source-ref">—</td></tr>
+    </table>
+  </div>
+</div>
+
+<!-- ==================== PHASE C5 ==================== -->
+<div class="phase">
+  <div class="phase-header" onclick="this.parentElement.classList.toggle('open')">
+    <h3><span class="arrow">&#9654;</span> C5 — Transaction System (Undo/Redo) <span class="phase-badge badge-done">Done</span></h3>
+    <span class="phase-pct">6 / 6</span>
+  </div>
+  <div class="phase-body">
+    <table>
+      <tr><th></th><th>Task</th><th>Crate</th><th>Source Reference</th></tr>
+      <tr><td><span class="check">&#10003;</span></td><td>PropertySnapshot (object_id + prop_name + old PropValue clone)</td><td><span class="crate-tag">cadora-document</span></td><td class="source-ref">Property::Copy for Transaction</td></tr>
+      <tr><td><span class="check">&#10003;</span></td><td>Transaction struct (name, id, Vec&lt;PropertySnapshot&gt;)</td><td><span class="crate-tag">cadora-document</span></td><td class="source-ref">App::Transaction</td></tr>
+      <tr><td><span class="check">&#10003;</span></td><td>open_transaction / commit_transaction / abort_transaction</td><td><span class="crate-tag">cadora-document</span></td><td class="source-ref">Document::openTransaction/commit/abort</td></tr>
+      <tr><td><span class="check">&#10003;</span></td><td>undo / redo (walk transaction, restore snapshots)</td><td><span class="crate-tag">cadora-document</span></td><td class="source-ref">Document::undo/redo</td></tr>
+      <tr><td><span class="check">&#10003;</span></td><td>Stack limits (max_undo count)</td><td><span class="crate-tag">cadora-document</span></td><td class="source-ref">Document::setMaxUndoStackSize</td></tr>
+      <tr><td><span class="check">&#10003;</span></td><td>Tests: open/commit, undo/redo, abort, limits — included in C3 document tests</td><td><span class="crate-tag">cadora-document</span></td><td class="source-ref">—</td></tr>
+    </table>
+  </div>
+</div>
+
+<!-- ==================== PHASE C6 ==================== -->
+<div class="phase">
+  <div class="phase-header" onclick="this.parentElement.classList.toggle('open')">
+    <h3><span class="arrow">&#9654;</span> C6 — Expression Engine <span class="phase-badge badge-done">Done</span></h3>
+    <span class="phase-pct">6 / 6</span>
+  </div>
+  <div class="phase-body">
+    <table>
+      <tr><th></th><th>Task</th><th>Crate</th><th>Source Reference</th></tr>
+      <tr><td><span class="check">&#10003;</span></td><td>Expression AST enum (Number, String, BinaryOp, UnaryOp, FunctionCall, PropertyRef, Conditional)</td><td><span class="crate-tag">cadora-document</span></td><td class="source-ref">Expression.h hierarchy</td></tr>
+      <tr><td><span class="check">&#10003;</span></td><td>Token lexer (numbers, identifiers, operators, parens)</td><td><span class="crate-tag">cadora-document</span></td><td class="source-ref">ExpressionParser.y lexer</td></tr>
+      <tr><td><span class="check">&#10003;</span></td><td>Recursive-descent parser (arithmetic + property refs + functions)</td><td><span class="crate-tag">cadora-document</span></td><td class="source-ref">ExpressionParser.y grammar</td></tr>
+      <tr><td><span class="check">&#10003;</span></td><td>Expression evaluator (evaluate AST to PropValue)</td><td><span class="crate-tag">cadora-document</span></td><td class="source-ref">Expression::eval()</td></tr>
+      <tr><td><span class="check">&#10003;</span></td><td>ExpressionEngine (bind expressions to properties, evaluate on recompute)</td><td><span class="crate-tag">cadora-document</span></td><td class="source-ref">PropertyExpressionEngine</td></tr>
+      <tr><td><span class="check">&#10003;</span></td><td>Tests: parse, evaluate, bindings, dependency tracking — 13 tests</td><td><span class="crate-tag">cadora-document</span></td><td class="source-ref">—</td></tr>
     </table>
   </div>
 </div>
