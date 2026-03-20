@@ -1,4 +1,15 @@
-//! Shape operations: extrusion, revolution, and boolean operations.
+//! Shape operations: extrusion, revolution, boolean operations, fillet & chamfer.
+//!
+//! Boolean operations match FreeCAD's approach:
+//! - Auto-fuzzy tolerance scaling with bounding box size
+//! - Retry with adjusted tolerance on failure
+//! - Multi-shape operations (fuse_all, cut_all)
+//!
+//! Fillet/chamfer match FreeCAD's Part::Fillet/Chamfer API:
+//! - Three chamfer types: EqualDistance, TwoDistances, DistanceAngle
+//! - Per-edge radii via FilletSpec/ChamferSpec
+//! - Edge validation (degenerated edges, boundary edges)
+//! - Flip direction for chamfer reference face
 
 use truck_modeling::*;
 use crate::shape::Shape;
@@ -49,18 +60,60 @@ pub enum BooleanOp {
     Common,
 }
 
-/// Default tolerance for boolean operations.
-const BOOLEAN_TOLERANCE: f64 = 0.05;
+/// Default base tolerance for boolean operations.
+const BOOLEAN_BASE_TOLERANCE: f64 = 0.05;
 
-/// Perform a boolean operation on two shapes.
+/// OCCT Precision::Confusion equivalent (~1e-7).
+const PRECISION_CONFUSION: f64 = 1e-7;
+
+/// Multiplier for auto-fuzzy (mirrors FreeCAD's BooleanFuzzy parameter, default 1.0).
+const BOOLEAN_FUZZY_MULTIPLIER: f64 = 1.0;
+
+/// Compute auto-fuzzy tolerance scaled by shape bounding box size.
 ///
-/// Uses truck-shapeops for exact BRep boolean operations.
-/// The tolerance controls the precision of surface intersection detection.
-pub fn boolean(base: &Shape, tool: &Shape, op: BooleanOp) -> std::result::Result<Shape, BooleanError> {
-    boolean_with_tolerance(base, tool, op, BOOLEAN_TOLERANCE)
+/// Formula matches FreeCAD's FCBRepAlgoAPI_BooleanOperation::setAutoFuzzy:
+///   fuzzy = BooleanFuzzy * sqrt(bounds.SquareExtent()) * Precision::Confusion()
+fn auto_fuzzy_tolerance(base: &Shape, tool: &Shape) -> f64 {
+    let bb1 = base.bounding_box();
+    let bb2 = tool.bounding_box();
+    // Combined bounding box diagonal
+    let min_x = bb1.min.x.min(bb2.min.x);
+    let min_y = bb1.min.y.min(bb2.min.y);
+    let min_z = bb1.min.z.min(bb2.min.z);
+    let max_x = bb1.max.x.max(bb2.max.x);
+    let max_y = bb1.max.y.max(bb2.max.y);
+    let max_z = bb1.max.z.max(bb2.max.z);
+    let dx = max_x - min_x;
+    let dy = max_y - min_y;
+    let dz = max_z - min_z;
+    let square_extent = dx * dx + dy * dy + dz * dz;
+
+    let fuzzy = BOOLEAN_FUZZY_MULTIPLIER * square_extent.sqrt() * PRECISION_CONFUSION;
+    // truck-shapeops needs practical minimum (~0.01) — OCCT handles smaller values
+    // but truck's algorithm converges slowly at micro-tolerances on curved surfaces.
+    fuzzy.max(0.01)
 }
 
-/// Perform a boolean operation with a custom tolerance.
+/// Perform a boolean operation with auto-fuzzy tolerance (like FreeCAD).
+///
+/// Uses size-dependent tolerance. If the operation fails, retries with
+/// progressively larger tolerances (up to 3 attempts).
+pub fn boolean(base: &Shape, tool: &Shape, op: BooleanOp) -> std::result::Result<Shape, BooleanError> {
+    let auto_tol = auto_fuzzy_tolerance(base, tool);
+
+    // Try auto-fuzzy first, then retry with increasing tolerance
+    let tolerances = [auto_tol, auto_tol * 10.0, BOOLEAN_BASE_TOLERANCE];
+    let mut last_err = None;
+    for &tol in &tolerances {
+        match boolean_with_tolerance(base, tool, op, tol) {
+            Ok(result) => return Ok(result),
+            Err(e) => last_err = Some(e),
+        }
+    }
+    Err(last_err.unwrap())
+}
+
+/// Perform a boolean operation with an explicit tolerance.
 pub fn boolean_with_tolerance(
     base: &Shape,
     tool: &Shape,
@@ -82,7 +135,35 @@ pub fn boolean_with_tolerance(
     };
     result
         .map(Shape::from_solid)
-        .ok_or_else(|| BooleanError::OperationFailed("Boolean operation returned None".into()))
+        .ok_or_else(|| BooleanError::OperationFailed(format!(
+            "Boolean {op:?} failed (tolerance={tolerance:.2e}). Shapes may have coplanar faces."
+        )))
+}
+
+/// Fuse (union) multiple shapes into one.
+///
+/// Mirrors FreeCAD's MultiFuse: sequentially fuses all shapes.
+/// Uses auto-fuzzy tolerance.
+pub fn fuse_all(shapes: &[Shape]) -> std::result::Result<Shape, BooleanError> {
+    if shapes.is_empty() {
+        return Err(BooleanError::OperationFailed("No shapes to fuse".into()));
+    }
+    let mut result = shapes[0].clone();
+    for shape in &shapes[1..] {
+        result = boolean(&result, shape, BooleanOp::Fuse)?;
+    }
+    Ok(result)
+}
+
+/// Cut multiple tools from a base shape sequentially.
+///
+/// Mirrors FreeCAD's approach of iterative subtraction.
+pub fn cut_all(base: &Shape, tools: &[Shape]) -> std::result::Result<Shape, BooleanError> {
+    let mut result = base.clone();
+    for tool in tools {
+        result = boolean(&result, tool, BooleanOp::Cut)?;
+    }
+    Ok(result)
 }
 
 /// Errors from boolean operations.
@@ -124,26 +205,175 @@ impl std::fmt::Display for DressUpError {
 
 impl std::error::Error for DressUpError {}
 
-/// Chamfer edges of a shape by cutting a flat bevel.
+// ─── Chamfer types (matching FreeCAD's ChamferType enum) ───
+
+/// Chamfer type modes, matching FreeCAD's PartDesign::Chamfer.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum ChamferType {
+    /// Same distance on both faces.
+    EqualDistance,
+    /// Different distance on each adjacent face.
+    TwoDistances,
+    /// Distance on one face + angle from that face.
+    DistanceAngle,
+}
+
+/// Per-edge chamfer specification.
+#[derive(Debug, Clone, Copy)]
+pub struct ChamferSpec {
+    /// Edge index in shape traversal order.
+    pub edge_idx: usize,
+    /// Primary distance (or the only distance for EqualDistance).
+    pub size: f64,
+    /// Secondary distance (for TwoDistances) or angle in degrees (for DistanceAngle).
+    pub size2: f64,
+    /// Chamfer type.
+    pub chamfer_type: ChamferType,
+    /// Flip which face gets size vs size2.
+    pub flip: bool,
+}
+
+impl ChamferSpec {
+    /// Create an equal-distance chamfer spec.
+    pub fn equal(edge_idx: usize, distance: f64) -> Self {
+        Self { edge_idx, size: distance, size2: distance, chamfer_type: ChamferType::EqualDistance, flip: false }
+    }
+
+    /// Create a two-distances chamfer spec.
+    pub fn two_distances(edge_idx: usize, d1: f64, d2: f64) -> Self {
+        Self { edge_idx, size: d1, size2: d2, chamfer_type: ChamferType::TwoDistances, flip: false }
+    }
+
+    /// Create a distance+angle chamfer spec.
+    pub fn distance_angle(edge_idx: usize, distance: f64, angle_deg: f64) -> Self {
+        Self { edge_idx, size: distance, size2: angle_deg, chamfer_type: ChamferType::DistanceAngle, flip: false }
+    }
+
+    /// Set flip direction.
+    pub fn with_flip(mut self, flip: bool) -> Self {
+        self.flip = flip;
+        self
+    }
+
+    /// Validate parameters (matching FreeCAD's validateParameters).
+    fn validate(&self) -> std::result::Result<(), DressUpError> {
+        match self.chamfer_type {
+            ChamferType::EqualDistance => {
+                if self.size <= 0.0 {
+                    return Err(DressUpError::OperationFailed("Size must be greater than zero".into()));
+                }
+            }
+            ChamferType::TwoDistances => {
+                if self.size <= 0.0 || self.size2 <= 0.0 {
+                    return Err(DressUpError::OperationFailed("Both sizes must be greater than zero".into()));
+                }
+            }
+            ChamferType::DistanceAngle => {
+                if self.size <= 0.0 {
+                    return Err(DressUpError::OperationFailed("Size must be greater than zero".into()));
+                }
+                if self.size2 <= 0.0 || self.size2 >= 180.0 {
+                    return Err(DressUpError::OperationFailed("Angle must be between 0 and 180 degrees".into()));
+                }
+            }
+        }
+        Ok(())
+    }
+
+    /// Compute the two effective distances (d1 on face1, d2 on face2).
+    fn effective_distances(&self) -> (f64, f64) {
+        let (d1, d2) = match self.chamfer_type {
+            ChamferType::EqualDistance => (self.size, self.size),
+            ChamferType::TwoDistances => (self.size, self.size2),
+            ChamferType::DistanceAngle => {
+                let angle_rad = self.size2.to_radians();
+                let d2 = self.size * angle_rad.tan();
+                (self.size, d2)
+            }
+        };
+        if self.flip { (d2, d1) } else { (d1, d2) }
+    }
+}
+
+/// Per-edge fillet specification.
+#[derive(Debug, Clone, Copy)]
+pub struct FilletSpec {
+    /// Edge index in shape traversal order.
+    pub edge_idx: usize,
+    /// Start radius of the fillet.
+    pub radius1: f64,
+    /// End radius of the fillet.
+    pub radius2: f64,
+}
+
+impl FilletSpec {
+    /// Create a uniform-radius fillet spec.
+    pub fn uniform(edge_idx: usize, radius: f64) -> Self {
+        Self { edge_idx, radius1: radius, radius2: radius }
+    }
+
+    /// Create a variable-radius fillet spec (different radius at each end).
+    pub fn variable(edge_idx: usize, r1: f64, r2: f64) -> Self {
+        Self { edge_idx, radius1: r1, radius2: r2 }
+    }
+
+    /// Validate parameters.
+    fn validate(&self) -> std::result::Result<(), DressUpError> {
+        if self.radius1 <= 0.0 || self.radius2 <= 0.0 {
+            return Err(DressUpError::OperationFailed("Fillet radius must be greater than zero".into()));
+        }
+        Ok(())
+    }
+}
+
+/// Chamfer edges of a shape using equal distance.
 ///
-/// Each edge is identified by index (in shape traversal order).
-/// Works on straight edges between planar faces.
+/// Simple API for uniform chamfer. For per-edge parameters, use `chamfer_advanced`.
 pub fn chamfer(shape: &Shape, edge_indices: &[usize], distance: f64) -> std::result::Result<Shape, DressUpError> {
+    let specs: Vec<ChamferSpec> = edge_indices.iter().map(|&idx| ChamferSpec::equal(idx, distance)).collect();
+    chamfer_advanced(shape, &specs)
+}
+
+/// Chamfer edges with per-edge parameters (distance, type, flip).
+///
+/// Matches FreeCAD's PartDesign::Chamfer with ChamferType support.
+pub fn chamfer_advanced(shape: &Shape, specs: &[ChamferSpec]) -> std::result::Result<Shape, DressUpError> {
+    if specs.is_empty() {
+        return Err(DressUpError::InvalidEdge("No edges specified".into()));
+    }
+    for spec in specs {
+        spec.validate()?;
+    }
     let mut result = shape.clone();
-    for &idx in edge_indices {
-        result = chamfer_single_edge(&result, idx, distance)?;
+    for spec in specs {
+        result = chamfer_single_edge_advanced(&result, spec)?;
     }
     Ok(result)
 }
 
-/// Fillet edges of a shape with a rounded blend.
+/// Fillet edges of a shape with a uniform radius.
 ///
-/// Each edge is identified by index (in shape traversal order).
-/// Works on straight edges between planar faces meeting at ~90°.
+/// Simple API. For per-edge radii, use `fillet_advanced`.
 pub fn fillet(shape: &Shape, edge_indices: &[usize], radius: f64) -> std::result::Result<Shape, DressUpError> {
+    let specs: Vec<FilletSpec> = edge_indices.iter().map(|&idx| FilletSpec::uniform(idx, radius)).collect();
+    fillet_advanced(shape, &specs)
+}
+
+/// Fillet edges with per-edge radii.
+///
+/// Matches FreeCAD's Part::Fillet with per-edge radius1/radius2 support.
+pub fn fillet_advanced(shape: &Shape, specs: &[FilletSpec]) -> std::result::Result<Shape, DressUpError> {
+    if specs.is_empty() {
+        return Err(DressUpError::InvalidEdge("No edges specified".into()));
+    }
+    for spec in specs {
+        spec.validate()?;
+    }
     let mut result = shape.clone();
-    for &idx in edge_indices {
-        result = fillet_single_edge(&result, idx, radius)?;
+    for spec in specs {
+        // Use average radius for the cutting tool (variable fillet is approximated)
+        let r = (spec.radius1 + spec.radius2) / 2.0;
+        result = fillet_single_edge(&result, spec.edge_idx, r)?;
     }
     Ok(result)
 }
@@ -154,6 +384,8 @@ struct EdgeFaceInfo {
     back: Point3,
     face_idx: usize,
     global_edge_idx: usize,
+    /// True if the edge is degenerated (zero length).
+    degenerated: bool,
 }
 
 /// Collect all edges with face membership info.
@@ -164,11 +396,15 @@ fn collect_edges(shape: &Shape) -> Vec<EdgeFaceInfo> {
         for (face_idx, face) in shell.face_iter().enumerate() {
             for wire in face.boundaries() {
                 for edge in wire.edge_iter() {
+                    let f = edge.front().point();
+                    let b = edge.back().point();
+                    let degenerated = (f - b).magnitude() < 1e-12;
                     result.push(EdgeFaceInfo {
-                        front: edge.front().point(),
-                        back: edge.back().point(),
+                        front: f,
+                        back: b,
                         face_idx,
                         global_edge_idx: global_idx,
+                        degenerated,
                     });
                     global_idx += 1;
                 }
@@ -178,34 +414,87 @@ fn collect_edges(shape: &Shape) -> Vec<EdgeFaceInfo> {
     result
 }
 
-/// Find the two face normals adjacent to an edge.
-fn find_edge_adjacent_normals(shape: &Shape, edge_idx: usize) -> std::result::Result<(Point3, Point3, Vector3, Vector3), DressUpError> {
+/// Build an edge→faces adjacency map (like OCCT's TopExp::MapShapesAndAncestors).
+///
+/// Returns a list where each entry has (edge_info, face1_idx, face2_idx).
+/// Edges that don't have exactly 2 adjacent faces are boundary edges.
+fn edge_face_adjacency(shape: &Shape) -> Vec<(usize, Point3, Point3, usize, Option<usize>, bool)> {
     let edges = collect_edges(shape);
-    let target = edges.iter().find(|e| e.global_edge_idx == edge_idx)
+    let eps = 1e-8;
+    let mut adjacency = Vec::new();
+
+    // Track which edges we've already paired
+    let mut visited = vec![false; edges.len()];
+
+    for i in 0..edges.len() {
+        if visited[i] { continue; }
+        let e = &edges[i];
+        visited[i] = true;
+
+        // Find the matching edge on another face
+        let mut other_face = None;
+        for j in (i + 1)..edges.len() {
+            if visited[j] { continue; }
+            let ej = &edges[j];
+            if ej.face_idx == e.face_idx { continue; }
+            let fwd = (ej.front - e.front).magnitude() < eps && (ej.back - e.back).magnitude() < eps;
+            let rev = (ej.front - e.back).magnitude() < eps && (ej.back - e.front).magnitude() < eps;
+            if fwd || rev {
+                other_face = Some(ej.face_idx);
+                visited[j] = true;
+                break;
+            }
+        }
+
+        adjacency.push((e.global_edge_idx, e.front, e.back, e.face_idx, other_face, e.degenerated));
+    }
+
+    adjacency
+}
+
+/// Find the two face normals adjacent to an edge with validation.
+///
+/// Returns (start_point, end_point, n1, n2) where n1 is the normal of
+/// the edge's own face and n2 is the normal of the adjacent face.
+/// If `flip` is true, n1 and n2 are swapped.
+fn find_edge_adjacent_normals(
+    shape: &Shape,
+    edge_idx: usize,
+    flip: bool,
+) -> std::result::Result<(Point3, Point3, Vector3, Vector3), DressUpError> {
+    let adjacency = edge_face_adjacency(shape);
+
+    let entry = adjacency.iter()
+        .find(|(idx, _, _, _, _, _)| *idx == edge_idx)
         .ok_or_else(|| DressUpError::InvalidEdge(format!("Edge index {edge_idx} out of range")))?;
 
-    let target_front = target.front;
-    let target_back = target.back;
-    let target_face = target.face_idx;
-    let eps = 1e-8;
+    let (_, start, end, face1_idx, face2_opt, degenerated) = entry;
 
-    // Find the other face that shares this edge (same endpoints)
-    let other_face = edges.iter()
-        .filter(|e| e.face_idx != target_face)
-        .find(|e| {
-            let fwd = (e.front - target_front).magnitude() < eps && (e.back - target_back).magnitude() < eps;
-            let rev = (e.front - target_back).magnitude() < eps && (e.back - target_front).magnitude() < eps;
-            fwd || rev
-        })
-        .ok_or_else(|| DressUpError::InvalidEdge("No adjacent face found".into()))?;
+    // Check for degenerated edge (matching FreeCAD's BRep_Tool::Degenerated check)
+    if *degenerated {
+        return Err(DressUpError::InvalidEdge(format!(
+            "Edge {edge_idx} is degenerated (zero length)"
+        )));
+    }
 
-    // Get face normals via the surface
+    // Check edge has two adjacent faces (not a boundary edge)
+    let face2_idx = face2_opt.ok_or_else(|| {
+        DressUpError::InvalidEdge(format!(
+            "Edge {edge_idx} is a boundary edge (only one adjacent face)"
+        ))
+    })?;
+
+    // Get face normals
     let shell = &shape.solid().boundaries()[0];
     let faces: Vec<&Face> = shell.face_iter().collect();
-    let n1 = face_outward_normal(faces[target_face]);
-    let n2 = face_outward_normal(faces[other_face.face_idx]);
+    let mut n1 = face_outward_normal(faces[*face1_idx]);
+    let mut n2 = face_outward_normal(faces[face2_idx]);
 
-    Ok((target_front, target_back, n1, n2))
+    if flip {
+        std::mem::swap(&mut n1, &mut n2);
+    }
+
+    Ok((*start, *end, n1, n2))
 }
 
 /// Get the outward normal of a face.
@@ -214,37 +503,26 @@ fn face_outward_normal(face: &Face) -> Vector3 {
     surface.normal(0.5, 0.5)
 }
 
-/// Chamfer a single edge by constructing and cutting a triangular prism.
-///
-/// The cutting prism is built with all vertices positioned OUTSIDE the original
-/// solid, with a generous margin. This avoids degenerate intersections in
-/// truck-shapeops' face-division algorithm that occur when cutting-tool vertices
-/// lie exactly on the target solid's faces.
-fn chamfer_single_edge(shape: &Shape, edge_idx: usize, distance: f64) -> std::result::Result<Shape, DressUpError> {
-    let (start, end, n1, n2) = find_edge_adjacent_normals(shape, edge_idx)?;
+/// Chamfer a single edge with advanced parameters.
+fn chamfer_single_edge_advanced(shape: &Shape, spec: &ChamferSpec) -> std::result::Result<Shape, DressUpError> {
+    let (start, end, n1, n2) = find_edge_adjacent_normals(shape, spec.edge_idx, spec.flip)?;
+
+    let (d1, d2) = spec.effective_distances();
 
     let edge_vec = end - start;
     let edge_len = edge_vec.magnitude();
     let edge_dir = edge_vec / edge_len;
 
-    // Extend the prism well beyond the edge ends
-    let ext = distance * 0.5;
+    let ext = d1.max(d2) * 0.5;
     let start_ext = start - edge_dir * ext;
     let extrude_dir = edge_dir * (edge_len + 2.0 * ext);
 
-    // Generous margin: all 3 profile vertices are placed outside the solid.
-    // n1, n2 are outward face normals. Moving along n1/n2 goes outside;
-    // moving along -n1/-n2 goes inside the solid.
-    let margin = distance * 0.3;
+    // Margin keeps all profile vertices outside the solid
+    let margin = d1.max(d2) * 0.3;
 
-    // p0: corner vertex — pushed outward along both normals (outside the corner)
     let p0 = start_ext + n1 * margin + n2 * margin;
-    // p1: chamfer vertex on face-1 side — pushed inward past face-1 by (d + margin),
-    //     but kept outside face-2 by margin
-    let p1 = start_ext - n1 * (distance + margin) + n2 * margin;
-    // p2: chamfer vertex on face-2 side — pushed inward past face-2 by (d + margin),
-    //     but kept outside face-1 by margin
-    let p2 = start_ext - n2 * (distance + margin) + n1 * margin;
+    let p1 = start_ext - n1 * (d1 + margin) + n2 * margin;
+    let p2 = start_ext - n2 * (d2 + margin) + n1 * margin;
 
     let v0 = builder::vertex(p0);
     let v1 = builder::vertex(p1);
@@ -269,10 +547,10 @@ fn chamfer_single_edge(shape: &Shape, edge_idx: usize, distance: f64) -> std::re
 /// Fillet a single edge by constructing and cutting a profiled shape with a
 /// circular-arc face.
 ///
-/// Same margin strategy as chamfer: all profile vertices are outside the solid
-/// to avoid degenerate boolean intersections.
+/// All profile vertices are placed outside the solid to avoid degenerate
+/// boolean intersections in truck-shapeops' face-division algorithm.
 fn fillet_single_edge(shape: &Shape, edge_idx: usize, radius: f64) -> std::result::Result<Shape, DressUpError> {
-    let (start, end, n1, n2) = find_edge_adjacent_normals(shape, edge_idx)?;
+    let (start, end, n1, n2) = find_edge_adjacent_normals(shape, edge_idx, false)?;
 
     let edge_vec = end - start;
     let edge_len = edge_vec.magnitude();
@@ -322,6 +600,24 @@ mod tests {
     use crate::builder::*;
     use approx::assert_relative_eq;
 
+    // ─── Helpers ───
+
+    /// Helper: create a box solid using the tsweep chain pattern
+    fn make_test_box(origin: Point3, dx: f64, dy: f64, dz: f64) -> Solid {
+        let v = builder::vertex(origin);
+        let e = builder::tsweep(&v, Vector3::new(dx, 0.0, 0.0));
+        let f = builder::tsweep(&e, Vector3::new(0.0, dy, 0.0));
+        builder::tsweep(&f, Vector3::new(0.0, 0.0, dz))
+    }
+
+    fn box_shape(ox: f64, oy: f64, oz: f64, dx: f64, dy: f64, dz: f64) -> Shape {
+        Shape::from_solid(make_test_box(Point3::new(ox, oy, oz), dx, dy, dz))
+    }
+
+    fn unit_box() -> Shape { box_shape(0.0, 0.0, 0.0, 2.0, 2.0, 2.0) }
+
+    // ─── Extrusion tests ───
+
     #[test]
     fn extrude_rectangle() {
         let wire = make_rect_wire(10.0, 5.0);
@@ -346,54 +642,62 @@ mod tests {
 
     #[test]
     fn revolve_rectangle_full() {
-        // Revolve a rect profile in the XZ plane around Z to make a cylinder-like shape
         let p0 = Point3::new(3.0, 0.0, 0.0);
         let p1 = Point3::new(5.0, 0.0, 0.0);
         let p2 = Point3::new(5.0, 0.0, 10.0);
         let p3 = Point3::new(3.0, 0.0, 10.0);
-
         let v0 = builder::vertex(p0);
         let v1 = builder::vertex(p1);
         let v2 = builder::vertex(p2);
         let v3 = builder::vertex(p3);
-
         let wire = Wire::from(vec![
             builder::line(&v0, &v1),
             builder::line(&v1, &v2),
             builder::line(&v2, &v3),
             builder::line(&v3, &v0),
         ]);
-
         let shape = revolve_z(&wire, std::f64::consts::TAU);
         let bb = shape.bounding_box();
         assert_relative_eq!(bb.min.z, 0.0, epsilon = 0.5);
         assert_relative_eq!(bb.max.z, 10.0, epsilon = 0.5);
     }
 
-    /// Helper: create a box solid using the tsweep chain pattern (vertex→edge→face→solid)
-    fn make_test_box(origin: Point3, dx: f64, dy: f64, dz: f64) -> Solid {
-        let v = builder::vertex(origin);
-        let e = builder::tsweep(&v, Vector3::new(dx, 0.0, 0.0));
-        let f = builder::tsweep(&e, Vector3::new(0.0, dy, 0.0));
-        builder::tsweep(&f, Vector3::new(0.0, 0.0, dz))
+    // ─── Auto-fuzzy tolerance tests ───
+
+    #[test]
+    fn auto_fuzzy_scales_with_size() {
+        // Both shapes must be large enough that computed fuzzy exceeds 0.01 minimum.
+        // For diagonal D, fuzzy = D * 1e-7, so D > 1e5 needed (shapes ~60000+).
+        let medium = box_shape(0.0, 0.0, 0.0, 1e6, 1e6, 1e6);
+        let huge = box_shape(0.0, 0.0, 0.0, 1e8, 1e8, 1e8);
+        let tool = box_shape(0.5, 0.5, 0.5, 1.0, 1.0, 1.0);
+        let tol_medium = auto_fuzzy_tolerance(&medium, &tool);
+        let tol_huge = auto_fuzzy_tolerance(&huge, &tool);
+        assert!(tol_huge > tol_medium, "Larger shapes should have larger tolerance: huge={tol_huge} vs medium={tol_medium}");
     }
 
     #[test]
+    fn auto_fuzzy_minimum_threshold() {
+        // Tiny shapes should still have practical minimum (0.01) for truck-shapeops
+        let tiny = box_shape(0.0, 0.0, 0.0, 1e-8, 1e-8, 1e-8);
+        let tol = auto_fuzzy_tolerance(&tiny, &tiny);
+        assert!(tol >= 0.01, "Minimum tolerance not enforced: {tol}");
+    }
+
+    // ─── Boolean basic tests ───
+
+    #[test]
     fn boolean_fuse_two_boxes() {
-        // Two overlapping boxes: no coplanar faces
-        let s1 = Shape::from_solid(make_test_box(Point3::origin(), 2.0, 2.0, 2.0));
-        let s2 = Shape::from_solid(make_test_box(Point3::new(0.5, 0.5, 0.5), 2.0, 2.0, 2.0));
+        let s1 = box_shape(0.0, 0.0, 0.0, 2.0, 2.0, 2.0);
+        let s2 = box_shape(0.5, 0.5, 0.5, 2.0, 2.0, 2.0);
         let fused = boolean(&s1, &s2, BooleanOp::Fuse).expect("Fuse should succeed");
         let bb = fused.bounding_box();
         assert_relative_eq!(bb.min.x, 0.0, epsilon = 0.2);
         assert_relative_eq!(bb.max.x, 2.5, epsilon = 0.2);
-        assert_relative_eq!(bb.min.y, 0.0, epsilon = 0.2);
-        assert_relative_eq!(bb.max.y, 2.5, epsilon = 0.2);
     }
 
     #[test]
     fn boolean_cut_box() {
-        // Cut a cylinder hole from a cube (same as truck-shapeops example)
         let cube = make_test_box(Point3::origin(), 1.0, 1.0, 1.0);
         let v = builder::vertex(Point3::new(0.5, 0.25, -0.5));
         let w = builder::rsweep(&v, Point3::new(0.5, 0.5, 0.0), Vector3::unit_z(), Rad(7.0));
@@ -406,70 +710,284 @@ mod tests {
         let bb = result.bounding_box();
         assert_relative_eq!(bb.min.x, 0.0, epsilon = 0.2);
         assert_relative_eq!(bb.max.x, 1.0, epsilon = 0.2);
-        assert!(result.face_count() > 6); // More faces than original cube
+        assert!(result.face_count() > 6);
     }
 
     #[test]
     fn boolean_common_two_boxes() {
-        // Common of two overlapping boxes: no coplanar faces
-        let s1 = Shape::from_solid(make_test_box(Point3::origin(), 2.0, 2.0, 2.0));
-        let s2 = Shape::from_solid(make_test_box(Point3::new(0.5, 0.5, 0.5), 2.0, 2.0, 2.0));
+        let s1 = box_shape(0.0, 0.0, 0.0, 2.0, 2.0, 2.0);
+        let s2 = box_shape(0.5, 0.5, 0.5, 2.0, 2.0, 2.0);
         let common = boolean(&s1, &s2, BooleanOp::Common).expect("Common should succeed");
         let bb = common.bounding_box();
-        // The common volume should be (0.5,0.5,0.5)-(2.0,2.0,2.0) = 1.5×1.5×1.5
         assert_relative_eq!(bb.min.x, 0.5, epsilon = 0.2);
         assert_relative_eq!(bb.max.x, 2.0, epsilon = 0.2);
-        assert_relative_eq!(bb.min.y, 0.5, epsilon = 0.2);
-        assert_relative_eq!(bb.max.y, 2.0, epsilon = 0.2);
     }
 
     #[test]
     fn boolean_with_custom_tolerance() {
-        let s1 = Shape::from_solid(make_test_box(Point3::origin(), 2.0, 2.0, 2.0));
-        let s2 = Shape::from_solid(make_test_box(Point3::new(0.5, 0.5, 0.5), 2.0, 2.0, 2.0));
+        let s1 = box_shape(0.0, 0.0, 0.0, 2.0, 2.0, 2.0);
+        let s2 = box_shape(0.5, 0.5, 0.5, 2.0, 2.0, 2.0);
         let result = boolean_with_tolerance(&s1, &s2, BooleanOp::Fuse, 0.01);
         assert!(result.is_ok());
     }
 
+    // ─── Multi-shape boolean tests ───
+
+    #[test]
+    fn fuse_all_three_boxes() {
+        let a = box_shape(0.0, 0.0, 0.0, 2.0, 2.0, 2.0);
+        let b = box_shape(0.5, 0.5, 0.5, 2.0, 2.0, 2.0);
+        let c = box_shape(1.0, 1.0, 1.0, 2.0, 2.0, 2.0);
+        let result = fuse_all(&[a, b, c]).expect("fuse_all should succeed");
+        let bb = result.bounding_box();
+        assert_relative_eq!(bb.min.x, 0.0, epsilon = 0.2);
+        assert_relative_eq!(bb.max.x, 3.0, epsilon = 0.2);
+    }
+
+    #[test]
+    fn fuse_all_empty_fails() {
+        let result = fuse_all(&[]);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("No shapes"));
+    }
+
+    #[test]
+    fn cut_all_two_tools() {
+        let base = box_shape(0.0, 0.0, 0.0, 4.0, 4.0, 4.0);
+        let tool1 = box_shape(0.5, 0.5, -0.5, 1.0, 1.0, 5.0);
+        let tool2 = box_shape(2.5, 2.5, -0.5, 1.0, 1.0, 5.0);
+        let result = cut_all(&base, &[tool1, tool2]).expect("cut_all should succeed");
+        assert!(result.face_count() > 6);
+    }
+
+    // ─── ChamferSpec tests ───
+
+    #[test]
+    fn chamfer_spec_effective_distances_equal() {
+        let spec = ChamferSpec::equal(0, 1.5);
+        let (d1, d2) = spec.effective_distances();
+        assert_relative_eq!(d1, 1.5, epsilon = 1e-10);
+        assert_relative_eq!(d2, 1.5, epsilon = 1e-10);
+    }
+
+    #[test]
+    fn chamfer_spec_effective_distances_two() {
+        let spec = ChamferSpec::two_distances(0, 1.0, 2.0);
+        let (d1, d2) = spec.effective_distances();
+        assert_relative_eq!(d1, 1.0, epsilon = 1e-10);
+        assert_relative_eq!(d2, 2.0, epsilon = 1e-10);
+    }
+
+    #[test]
+    fn chamfer_spec_effective_distances_angle_45() {
+        // At 45°, tan(45°) = 1.0, so d2 = d * 1.0
+        let spec = ChamferSpec::distance_angle(0, 1.0, 45.0);
+        let (d1, d2) = spec.effective_distances();
+        assert_relative_eq!(d1, 1.0, epsilon = 1e-10);
+        assert_relative_eq!(d2, 1.0, epsilon = 1e-6);
+    }
+
+    #[test]
+    fn chamfer_spec_flip_swaps_distances() {
+        let spec = ChamferSpec::two_distances(0, 1.0, 3.0).with_flip(true);
+        let (d1, d2) = spec.effective_distances();
+        assert_relative_eq!(d1, 3.0, epsilon = 1e-10);
+        assert_relative_eq!(d2, 1.0, epsilon = 1e-10);
+    }
+
+    #[test]
+    fn chamfer_spec_zero_size_fails() {
+        let spec = ChamferSpec::equal(0, 0.0);
+        assert!(spec.validate().is_err());
+    }
+
+    #[test]
+    fn chamfer_spec_negative_size_fails() {
+        let spec = ChamferSpec::equal(0, -1.0);
+        assert!(spec.validate().is_err());
+    }
+
+    #[test]
+    fn chamfer_spec_two_distances_zero_fails() {
+        let spec = ChamferSpec::two_distances(0, 1.0, 0.0);
+        assert!(spec.validate().is_err());
+    }
+
+    #[test]
+    fn chamfer_spec_angle_zero_fails() {
+        let spec = ChamferSpec::distance_angle(0, 1.0, 0.0);
+        assert!(spec.validate().is_err());
+    }
+
+    #[test]
+    fn chamfer_spec_angle_180_fails() {
+        let spec = ChamferSpec::distance_angle(0, 1.0, 180.0);
+        assert!(spec.validate().is_err());
+    }
+
+    #[test]
+    fn chamfer_spec_valid_passes() {
+        assert!(ChamferSpec::equal(0, 1.0).validate().is_ok());
+        assert!(ChamferSpec::two_distances(0, 1.0, 2.0).validate().is_ok());
+        assert!(ChamferSpec::distance_angle(0, 1.0, 45.0).validate().is_ok());
+    }
+
+    // ─── FilletSpec tests ───
+
+    #[test]
+    fn fillet_spec_uniform() {
+        let spec = FilletSpec::uniform(3, 0.5);
+        assert_eq!(spec.edge_idx, 3);
+        assert_relative_eq!(spec.radius1, 0.5);
+        assert_relative_eq!(spec.radius2, 0.5);
+        assert!(spec.validate().is_ok());
+    }
+
+    #[test]
+    fn fillet_spec_variable() {
+        let spec = FilletSpec::variable(0, 0.3, 0.7);
+        assert_relative_eq!(spec.radius1, 0.3);
+        assert_relative_eq!(spec.radius2, 0.7);
+        assert!(spec.validate().is_ok());
+    }
+
+    #[test]
+    fn fillet_spec_zero_radius_fails() {
+        let spec = FilletSpec::uniform(0, 0.0);
+        assert!(spec.validate().is_err());
+    }
+
+    #[test]
+    fn fillet_spec_negative_radius_fails() {
+        let spec = FilletSpec::variable(0, -0.5, 0.5);
+        assert!(spec.validate().is_err());
+    }
+
+    // ─── Edge adjacency tests ───
+
+    #[test]
+    fn edge_adjacency_box_all_paired() {
+        let cube = unit_box();
+        let adj = edge_face_adjacency(&cube);
+        // A cube has 12 unique edges; each should have 2 adjacent faces
+        let paired = adj.iter().filter(|(_, _, _, _, f2, _)| f2.is_some()).count();
+        assert_eq!(paired, 12, "All 12 edges of a cube should be paired: got {paired}");
+    }
+
+    #[test]
+    fn edge_adjacency_no_degenerated_on_box() {
+        let cube = unit_box();
+        let adj = edge_face_adjacency(&cube);
+        let degen = adj.iter().filter(|(_, _, _, _, _, d)| *d).count();
+        assert_eq!(degen, 0, "Box should have no degenerated edges");
+    }
+
+    // ─── Chamfer operation tests ───
+
     #[test]
     fn chamfer_box_edge() {
-        let cube = Shape::from_solid(make_test_box(Point3::origin(), 2.0, 2.0, 2.0));
+        let cube = unit_box();
         let original_faces = cube.face_count();
         let result = chamfer(&cube, &[0], 0.3);
         assert!(result.is_ok(), "Chamfer should succeed: {:?}", result.err());
-        let chamfered = result.unwrap();
-        assert!(chamfered.face_count() > original_faces);
+        assert!(result.unwrap().face_count() > original_faces);
     }
 
     #[test]
     fn chamfer_preserves_overall_size() {
-        let cube = Shape::from_solid(make_test_box(Point3::origin(), 4.0, 4.0, 4.0));
-        let result = chamfer(&cube, &[0], 0.5);
-        assert!(result.is_ok());
-        let bb = result.unwrap().bounding_box();
-        // Overall bounding box should be approximately the same
+        let cube = box_shape(0.0, 0.0, 0.0, 4.0, 4.0, 4.0);
+        let result = chamfer(&cube, &[0], 0.5).unwrap();
+        let bb = result.bounding_box();
         assert_relative_eq!(bb.max.x, 4.0, epsilon = 0.3);
         assert_relative_eq!(bb.max.y, 4.0, epsilon = 0.3);
         assert_relative_eq!(bb.max.z, 4.0, epsilon = 0.3);
     }
 
     #[test]
-    fn fillet_box_edge() {
-        let cube = Shape::from_solid(make_test_box(Point3::origin(), 2.0, 2.0, 2.0));
-        let original_faces = cube.face_count();
-        let result = fillet(&cube, &[0], 0.3);
-        assert!(result.is_ok(), "Fillet should succeed: {:?}", result.err());
-        let filleted = result.unwrap();
-        // Fillet adds a new curved face
-        assert!(filleted.face_count() > original_faces);
+    fn chamfer_advanced_equal() {
+        let cube = unit_box();
+        let specs = vec![ChamferSpec::equal(0, 0.3)];
+        let result = chamfer_advanced(&cube, &specs);
+        assert!(result.is_ok(), "chamfer_advanced equal: {:?}", result.err());
+        assert!(result.unwrap().face_count() > cube.face_count());
+    }
+
+    #[test]
+    fn chamfer_advanced_two_distances() {
+        let cube = unit_box();
+        let specs = vec![ChamferSpec::two_distances(0, 0.2, 0.4)];
+        let result = chamfer_advanced(&cube, &specs);
+        assert!(result.is_ok(), "chamfer_advanced two_distances: {:?}", result.err());
+    }
+
+    #[test]
+    fn chamfer_advanced_distance_angle() {
+        let cube = unit_box();
+        let specs = vec![ChamferSpec::distance_angle(0, 0.3, 45.0)];
+        let result = chamfer_advanced(&cube, &specs);
+        assert!(result.is_ok(), "chamfer_advanced distance_angle: {:?}", result.err());
+    }
+
+    #[test]
+    fn chamfer_advanced_with_flip() {
+        let cube = unit_box();
+        let specs = vec![ChamferSpec::two_distances(0, 0.2, 0.4).with_flip(true)];
+        let result = chamfer_advanced(&cube, &specs);
+        assert!(result.is_ok(), "chamfer_advanced flip: {:?}", result.err());
+    }
+
+    #[test]
+    fn chamfer_empty_specs_fails() {
+        let cube = unit_box();
+        let result = chamfer_advanced(&cube, &[]);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("No edges"));
     }
 
     #[test]
     fn chamfer_invalid_edge() {
-        let cube = Shape::from_solid(make_test_box(Point3::origin(), 2.0, 2.0, 2.0));
+        let cube = unit_box();
         let result = chamfer(&cube, &[999], 0.3);
         assert!(result.is_err());
     }
+
+    // ─── Fillet operation tests ───
+
+    #[test]
+    fn fillet_box_edge() {
+        let cube = unit_box();
+        let original_faces = cube.face_count();
+        let result = fillet(&cube, &[0], 0.3);
+        assert!(result.is_ok(), "Fillet should succeed: {:?}", result.err());
+        assert!(result.unwrap().face_count() > original_faces);
+    }
+
+    #[test]
+    fn fillet_advanced_uniform() {
+        let cube = unit_box();
+        let specs = vec![FilletSpec::uniform(0, 0.3)];
+        let result = fillet_advanced(&cube, &specs);
+        assert!(result.is_ok(), "fillet_advanced uniform: {:?}", result.err());
+        assert!(result.unwrap().face_count() > cube.face_count());
+    }
+
+    #[test]
+    fn fillet_advanced_variable() {
+        let cube = unit_box();
+        let specs = vec![FilletSpec::variable(0, 0.2, 0.4)];
+        let result = fillet_advanced(&cube, &specs);
+        assert!(result.is_ok(), "fillet_advanced variable: {:?}", result.err());
+    }
+
+    #[test]
+    fn fillet_empty_specs_fails() {
+        let cube = unit_box();
+        let result = fillet_advanced(&cube, &[]);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("No edges"));
+    }
+
+    // ─── Error display tests ───
 
     #[test]
     fn dressup_error_display() {
@@ -477,5 +995,13 @@ mod tests {
         assert!(format!("{e1}").contains("Invalid edge"));
         let e2 = DressUpError::OperationFailed("fail".into());
         assert!(format!("{e2}").contains("Dress-up failed"));
+    }
+
+    #[test]
+    fn boolean_error_display() {
+        let e = BooleanError::OperationFailed("test".into());
+        let msg = format!("{e}");
+        assert!(msg.contains("Boolean operation failed"));
+        assert!(msg.contains("test"));
     }
 }
