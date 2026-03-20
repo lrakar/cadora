@@ -49,6 +49,7 @@
   td { padding: 0.5rem 0; border-bottom: 1px solid rgba(48,54,61,.5); font-size: 0.9rem; }
   td:first-child { width: 30px; text-align: center; }
   .check { color: var(--green); font-weight: 700; }
+  .done { color: var(--green); font-weight: 700; }
   .pending { color: var(--border); }
   .crate-tag { font-size: 0.7rem; background: rgba(188,140,255,.12); color: var(--purple); padding: 1px 6px; border-radius: 4px; margin-left: 6px; }
   .source-ref { font-size: 0.75rem; color: var(--text-muted); }
@@ -77,8 +78,8 @@
 <!-- Overall progress -->
 <div class="overall">
   <h2>Overall Progress</h2>
-  <div class="bar-outer"><div class="bar-inner" id="overallBar" style="width:75%"></div></div>
-  <div class="pct"><span id="overallPct">79</span> / 79 tasks complete</div>
+  <div class="bar-outer"><div class="bar-inner" id="overallBar" style="width:100%"></div></div>
+  <div class="pct"><span id="overallPct">180</span> / 180 tasks complete</div>
 </div>
 
 <!-- ==================== PHASE 0 ==================== -->
@@ -424,19 +425,19 @@
 <!-- ==================== PHASE A6 ==================== -->
 <div class="phase">
   <div class="phase-header" onclick="this.parentElement.classList.toggle('open')">
-    <h3><span class="arrow">&#9654;</span> A6 — Geometry Operations <span class="phase-badge badge-todo">Todo</span></h3>
-    <span class="phase-pct">0 / 7</span>
+    <h3><span class="arrow">&#9654;</span> A6 — Geometry Operations <span class="phase-badge badge-done">Done</span></h3>
+    <span class="phase-pct">7 / 7</span>
   </div>
   <div class="phase-body">
     <table>
       <tr><th></th><th>Task</th><th>Crate</th><th>Source Reference</th></tr>
-      <tr><td><span class="pending">&#9744;</span></td><td>fillet() — arc fillet between two lines at vertex</td><td><span class="crate-tag">cadora-sketch</span></td><td class="source-ref">SketchObject::fillet()</td></tr>
-      <tr><td><span class="pending">&#9744;</span></td><td>trim() — split geometry at intersection &amp; remove segment</td><td><span class="crate-tag">cadora-sketch</span></td><td class="source-ref">SketchObject::trim()</td></tr>
-      <tr><td><span class="pending">&#9744;</span></td><td>extend() — extend line/arc to another curve</td><td><span class="crate-tag">cadora-sketch</span></td><td class="source-ref">SketchObject::extend()</td></tr>
-      <tr><td><span class="pending">&#9744;</span></td><td>split() — break geometry at a point without removal</td><td><span class="crate-tag">cadora-sketch</span></td><td class="source-ref">SketchObject::split()</td></tr>
-      <tr><td><span class="pending">&#9744;</span></td><td>join() — merge two compatible geometries</td><td><span class="crate-tag">cadora-sketch</span></td><td class="source-ref">SketchObject::join()</td></tr>
-      <tr><td><span class="pending">&#9744;</span></td><td>Symmetric copy &amp; pattern (addSymmetric, addCopy)</td><td><span class="crate-tag">cadora-sketch</span></td><td class="source-ref">SketchObject addSymmetric/addCopy</td></tr>
-      <tr><td><span class="pending">&#9744;</span></td><td>Tests: fillet geometry, trim at intersection, extend to boundary, symmetric copy</td><td><span class="crate-tag">cadora-sketch</span></td><td class="source-ref">—</td></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>fillet() — arc fillet between two lines at vertex</td><td><span class="crate-tag">cadora-sketch</span></td><td class="source-ref">SketchObject::fillet()</td></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>trim() — split geometry at intersection &amp; remove segment</td><td><span class="crate-tag">cadora-sketch</span></td><td class="source-ref">SketchObject::trim()</td></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>extend() — extend line/arc to another curve</td><td><span class="crate-tag">cadora-sketch</span></td><td class="source-ref">SketchObject::extend()</td></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>split() — break geometry at a point without removal</td><td><span class="crate-tag">cadora-sketch</span></td><td class="source-ref">SketchObject::split()</td></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>copy_geometries() — translate geometry copies with constraint duplication</td><td><span class="crate-tag">cadora-sketch</span></td><td class="source-ref">SketchObject addCopy</td></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>mirror_geometries() — mirror geometry across a line</td><td><span class="crate-tag">cadora-sketch</span></td><td class="source-ref">SketchObject addSymmetric</td></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>Tests: fillet, trim, extend, split, copy, mirror (11 tests)</td><td><span class="crate-tag">cadora-sketch</span></td><td class="source-ref">—</td></tr>
     </table>
   </div>
 </div>
@@ -444,19 +445,283 @@
 <!-- ==================== PHASE A7 ==================== -->
 <div class="phase">
   <div class="phase-header" onclick="this.parentElement.classList.toggle('open')">
-    <h3><span class="arrow">&#9654;</span> A7 — External Geometry &amp; Serialization <span class="phase-badge badge-todo">Todo</span></h3>
-    <span class="phase-pct">0 / 7</span>
+    <h3><span class="arrow">&#9654;</span> A7 — External Geometry &amp; Serialization <span class="phase-badge badge-done">Done</span></h3>
+    <span class="phase-pct">7 / 7</span>
   </div>
   <div class="phase-body">
     <table>
       <tr><th></th><th>Task</th><th>Crate</th><th>Source Reference</th></tr>
-      <tr><td><span class="pending">&#9744;</span></td><td>External geometry references (add_external, del_external — edges from 3D model)</td><td><span class="crate-tag">cadora-sketch</span></td><td class="source-ref">SketchObject addExternal/delExternal</td></tr>
-      <tr><td><span class="pending">&#9744;</span></td><td>External geometry rebuild (rebuildExternalGeometry, sync with 3D model changes)</td><td><span class="crate-tag">cadora-sketch</span></td><td class="source-ref">SketchObject rebuildExternalGeometry</td></tr>
-      <tr><td><span class="pending">&#9744;</span></td><td>Sketch serialization — save to JSON/binary (all geometry + constraints + metadata)</td><td><span class="crate-tag">cadora-sketch</span></td><td class="source-ref">SketchObject Save/Restore</td></tr>
-      <tr><td><span class="pending">&#9744;</span></td><td>Sketch deserialization — load from JSON/binary, reconstruct GCS state</td><td><span class="crate-tag">cadora-sketch</span></td><td class="source-ref">SketchObject Save/Restore</td></tr>
-      <tr><td><span class="pending">&#9744;</span></td><td>Undo/Redo stack (snapshot-based or command-pattern)</td><td><span class="crate-tag">cadora-sketch</span></td><td class="source-ref">SketchObject transaction support</td></tr>
-      <tr><td><span class="pending">&#9744;</span></td><td>Validation &amp; cleanup (detectDegeneratedGeometries, validateConstraints, consistency checks)</td><td><span class="crate-tag">cadora-sketch</span></td><td class="source-ref">SketchObject validation methods</td></tr>
-      <tr><td><span class="pending">&#9744;</span></td><td>Tests: serialize/deserialize roundtrip, undo/redo, external geometry, validation</td><td><span class="crate-tag">cadora-sketch</span></td><td class="source-ref">—</td></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>External geometry references (add_external, del_external, update_external)</td><td><span class="crate-tag">cadora-sketch</span></td><td class="source-ref">SketchObject addExternal/delExternal</td></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>External geometry rebuild (rebuild_external with resolver callback)</td><td><span class="crate-tag">cadora-sketch</span></td><td class="source-ref">SketchObject rebuildExternalGeometry</td></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>Sketch serialization — save_snapshot() to SketchSnapshot struct</td><td><span class="crate-tag">cadora-sketch</span></td><td class="source-ref">SketchObject Save/Restore</td></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>Sketch deserialization — load_snapshot() restores full state</td><td><span class="crate-tag">cadora-sketch</span></td><td class="source-ref">SketchObject Save/Restore</td></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>Undo/Redo stack (snapshot-based: push_undo, undo, redo)</td><td><span class="crate-tag">cadora-sketch</span></td><td class="source-ref">Document transaction support</td></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>Validation &amp; cleanup (validate, cleanup_invalid_constraints, remove_degenerate_geometry)</td><td><span class="crate-tag">cadora-sketch</span></td><td class="source-ref">SketchObject validation methods</td></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>Tests: serialize/deserialize roundtrip, undo/redo, external geometry, validation (14 tests)</td><td><span class="crate-tag">cadora-sketch</span></td><td class="source-ref">—</td></tr>
+    </table>
+  </div>
+</div>
+
+<!-- ================================================================= -->
+<!-- ==================== FUTURE PHASES ============================== -->
+<!-- ================================================================= -->
+
+<h1 style="margin-top:3rem;font-size:1.5rem;border-top:1px solid var(--border);padding-top:2rem;">
+  Phase C–I — 3D Modeling &amp; GUI
+</h1>
+<p class="subtitle">Next milestones: Document Model → BRep Kernel → PartDesign → GUI</p>
+
+<!-- ==================== PHASE C0 ==================== -->
+<div class="phase open">
+  <div class="phase-header" onclick="this.parentElement.classList.toggle('open')">
+    <h3><span class="arrow">&#9654;</span> C0 — Property System <span class="phase-badge badge-done">Done</span></h3>
+    <span class="phase-pct">8 / 8</span>
+  </div>
+  <div class="phase-body">
+    <table>
+      <tr><th></th><th>Task</th><th>Crate</th><th>Source Reference</th></tr>
+      <tr><td><span class="check">&#10003;</span></td><td>PropValue enum (Integer, Float, String, Bool, Vector3, Placement, Link, LinkList, LinkSub, LinkSubList, Enumeration, Quantity, Color)</td><td><span class="crate-tag">cadora-document</span></td><td class="source-ref">PropertyStandard.h, PropertyGeo.h, PropertyLinks.h</td></tr>
+      <tr><td><span class="check">&#10003;</span></td><td>PropertyStatus bitflags (Touched, Immutable, ReadOnly, Hidden, Transient, Output, NoRecompute)</td><td><span class="crate-tag">cadora-document</span></td><td class="source-ref">Property.h StatusBits enum</td></tr>
+      <tr><td><span class="check">&#10003;</span></td><td>Property struct (value + status + name) with copy/paste semantics</td><td><span class="crate-tag">cadora-document</span></td><td class="source-ref">Property.h Copy/Paste</td></tr>
+      <tr><td><span class="check">&#10003;</span></td><td>PropertyBag (ordered property map) with typed getters/setters</td><td><span class="crate-tag">cadora-document</span></td><td class="source-ref">PropertyContainer</td></tr>
+      <tr><td><span class="check">&#10003;</span></td><td>Touch/purgeTouched/isTouched propagation</td><td><span class="crate-tag">cadora-document</span></td><td class="source-ref">Property::touch/isTouched/purgeTouched</td></tr>
+      <tr><td><span class="check">&#10003;</span></td><td>Unit enum (Length, Angle, Area, Volume, Mass, Time, etc.) for Quantity</td><td><span class="crate-tag">cadora-document</span></td><td class="source-ref">PropertyUnits.h — 59 unit types</td></tr>
+      <tr><td><span class="check">&#10003;</span></td><td>Color type (RGBA f32) for PropertyColor</td><td><span class="crate-tag">cadora-document</span></td><td class="source-ref">Color.h</td></tr>
+      <tr><td><span class="check">&#10003;</span></td><td>Tests: property CRUD, status bits, typed access, touch tracking — 14 tests</td><td><span class="crate-tag">cadora-document</span></td><td class="source-ref">—</td></tr>
+    </table>
+  </div>
+</div>
+
+<!-- ==================== PHASE C1 ==================== -->
+<div class="phase">
+  <div class="phase-header" onclick="this.parentElement.classList.toggle('open')">
+    <h3><span class="arrow">&#9654;</span> C1 — Placement &amp; Transforms <span class="phase-badge badge-done">Done</span></h3>
+    <span class="phase-pct">6 / 6</span>
+  </div>
+  <div class="phase-body">
+    <table>
+      <tr><th></th><th>Task</th><th>Crate</th><th>Source Reference</th></tr>
+      <tr><td><span class="check">&#10003;</span></td><td>Rotation struct (nalgebra UnitQuaternion wrapper, axis-angle, Euler)</td><td><span class="crate-tag">cadora-document</span></td><td class="source-ref">Base::Rotation</td></tr>
+      <tr><td><span class="check">&#10003;</span></td><td>Placement struct (position Vec3 + rotation)</td><td><span class="crate-tag">cadora-document</span></td><td class="source-ref">Base::Placement</td></tr>
+      <tr><td><span class="check">&#10003;</span></td><td>Compose (*), inverse, transform_point, is_identity</td><td><span class="crate-tag">cadora-document</span></td><td class="source-ref">Placement operator*, inverse(), multVec()</td></tr>
+      <tr><td><span class="check">&#10003;</span></td><td>Axis-angle / Euler angle / YawPitchRoll conversions</td><td><span class="crate-tag">cadora-document</span></td><td class="source-ref">Rotation::setEulerAngles, getValue</td></tr>
+      <tr><td><span class="check">&#10003;</span></td><td>Slerp/Sclerp interpolation</td><td><span class="crate-tag">cadora-document</span></td><td class="source-ref">Placement::slerp, sclerp</td></tr>
+      <tr><td><span class="check">&#10003;</span></td><td>Tests: compose, inverse, conversions, slerp, identity — 12 tests</td><td><span class="crate-tag">cadora-document</span></td><td class="source-ref">—</td></tr>
+    </table>
+  </div>
+</div>
+
+<!-- ==================== PHASE C2 ==================== -->
+<div class="phase">
+  <div class="phase-header" onclick="this.parentElement.classList.toggle('open')">
+    <h3><span class="arrow">&#9654;</span> C2 — DocumentObject <span class="phase-badge badge-done">Done</span></h3>
+    <span class="phase-pct">7 / 7</span>
+  </div>
+  <div class="phase-body">
+    <table>
+      <tr><th></th><th>Task</th><th>Crate</th><th>Source Reference</th></tr>
+      <tr><td><span class="check">&#10003;</span></td><td>ObjectId newtype (u64) + ObjectStatus bitflags (Touch, Error, New, Recompute, Restore, Remove, Freeze)</td><td><span class="crate-tag">cadora-document</span></td><td class="source-ref">DocumentObject.h ObjectStatus</td></tr>
+      <tr><td><span class="check">&#10003;</span></td><td>DocumentObject struct (name, label, id, status, properties: PropertyBag)</td><td><span class="crate-tag">cadora-document</span></td><td class="source-ref">DocumentObject.h fields</td></tr>
+      <tr><td><span class="check">&#10003;</span></td><td>Property dynamic access (get/set by name, typed helpers)</td><td><span class="crate-tag">cadora-document</span></td><td class="source-ref">PropertyContainer getPropertyByName()</td></tr>
+      <tr><td><span class="check">&#10003;</span></td><td>Touch cascading (touch object → marks dirty for recompute)</td><td><span class="crate-tag">cadora-document</span></td><td class="source-ref">DocumentObject::touch()</td></tr>
+      <tr><td><span class="check">&#10003;</span></td><td>ObjectType trait (type_name, execute, must_execute, on_changed)</td><td><span class="crate-tag">cadora-document</span></td><td class="source-ref">DocumentObject virtual methods</td></tr>
+      <tr><td><span class="check">&#10003;</span></td><td>GeoFeature variant (adds Placement property automatically)</td><td><span class="crate-tag">cadora-document</span></td><td class="source-ref">GeoFeature.h Placement property</td></tr>
+      <tr><td><span class="check">&#10003;</span></td><td>Tests: object creation, property access, touch, status, type dispatch — 12 tests</td><td><span class="crate-tag">cadora-document</span></td><td class="source-ref">—</td></tr>
+    </table>
+  </div>
+</div>
+
+<!-- ==================== PHASE C3 ==================== -->
+<div class="phase">
+  <div class="phase-header" onclick="this.parentElement.classList.toggle('open')">
+    <h3><span class="arrow">&#9654;</span> C3 — Document Container <span class="phase-badge badge-done">Done</span></h3>
+    <span class="phase-pct">7 / 7</span>
+  </div>
+  <div class="phase-body">
+    <table>
+      <tr><th></th><th>Task</th><th>Crate</th><th>Source Reference</th></tr>
+      <tr><td><span class="check">&#10003;</span></td><td>Document struct (objects storage, name_map, id_map, next_id)</td><td><span class="crate-tag">cadora-document</span></td><td class="source-ref">Document.h DocumentP</td></tr>
+      <tr><td><span class="check">&#10003;</span></td><td>add_object() with unique name generation</td><td><span class="crate-tag">cadora-document</span></td><td class="source-ref">Document::addObject, getUniqueObjectName</td></tr>
+      <tr><td><span class="check">&#10003;</span></td><td>remove_object() with cascading link cleanup</td><td><span class="crate-tag">cadora-document</span></td><td class="source-ref">Document::removeObject</td></tr>
+      <tr><td><span class="check">&#10003;</span></td><td>get_object / get_object_by_id / get_objects / count</td><td><span class="crate-tag">cadora-document</span></td><td class="source-ref">Document::getObject, getObjectByID</td></tr>
+      <tr><td><span class="check">&#10003;</span></td><td>Object filtering by type name</td><td><span class="crate-tag">cadora-document</span></td><td class="source-ref">Document::getObjectsOfType</td></tr>
+      <tr><td><span class="check">&#10003;</span></td><td>Document-level properties (Label, FileName, CreatedBy, etc.)</td><td><span class="crate-tag">cadora-document</span></td><td class="source-ref">Document.h Label/FileName properties</td></tr>
+      <tr><td><span class="check">&#10003;</span></td><td>Tests: add/remove objects, naming, lookup, filtering — 15 tests</td><td><span class="crate-tag">cadora-document</span></td><td class="source-ref">—</td></tr>
+    </table>
+  </div>
+</div>
+
+<!-- ==================== PHASE C4 ==================== -->
+<div class="phase">
+  <div class="phase-header" onclick="this.parentElement.classList.toggle('open')">
+    <h3><span class="arrow">&#9654;</span> C4 — Dependency Graph &amp; Recompute <span class="phase-badge badge-done">Done</span></h3>
+    <span class="phase-pct">7 / 7</span>
+  </div>
+  <div class="phase-body">
+    <table>
+      <tr><th></th><th>Task</th><th>Crate</th><th>Source Reference</th></tr>
+      <tr><td><span class="check">&#10003;</span></td><td>Dependency DAG (petgraph DiGraph&lt;ObjectId, ()&gt;)</td><td><span class="crate-tag">cadora-document</span></td><td class="source-ref">Document.h boost::adjacency_list</td></tr>
+      <tr><td><span class="check">&#10003;</span></td><td>Build DAG from Link/LinkList properties (scan all objects)</td><td><span class="crate-tag">cadora-document</span></td><td class="source-ref">Document getOutList → graph edges</td></tr>
+      <tr><td><span class="check">&#10003;</span></td><td>Topological sort (compute execution order)</td><td><span class="crate-tag">cadora-document</span></td><td class="source-ref">Document::topologicalSort, boost::topological_sort</td></tr>
+      <tr><td><span class="check">&#10003;</span></td><td>recompute() — execute touched objects in topo order</td><td><span class="crate-tag">cadora-document</span></td><td class="source-ref">Document::recompute()</td></tr>
+      <tr><td><span class="check">&#10003;</span></td><td>Single-object recompute (recomputeFeature, optional recursive)</td><td><span class="crate-tag">cadora-document</span></td><td class="source-ref">Document::recomputeFeature()</td></tr>
+      <tr><td><span class="check">&#10003;</span></td><td>Cycle detection (DAG compatibility check before adding links)</td><td><span class="crate-tag">cadora-document</span></td><td class="source-ref">DocumentObject::testIfLinkDAGCompatible</td></tr>
+      <tr><td><span class="check">&#10003;</span></td><td>Tests: DAG building, topo sort, recompute cascade, cycle detection — 15 tests (merged with C3)</td><td><span class="crate-tag">cadora-document</span></td><td class="source-ref">—</td></tr>
+    </table>
+  </div>
+</div>
+
+<!-- ==================== PHASE C5 ==================== -->
+<div class="phase">
+  <div class="phase-header" onclick="this.parentElement.classList.toggle('open')">
+    <h3><span class="arrow">&#9654;</span> C5 — Transaction System (Undo/Redo) <span class="phase-badge badge-done">Done</span></h3>
+    <span class="phase-pct">6 / 6</span>
+  </div>
+  <div class="phase-body">
+    <table>
+      <tr><th></th><th>Task</th><th>Crate</th><th>Source Reference</th></tr>
+      <tr><td><span class="check">&#10003;</span></td><td>PropertySnapshot (object_id + prop_name + old PropValue clone)</td><td><span class="crate-tag">cadora-document</span></td><td class="source-ref">Property::Copy for Transaction</td></tr>
+      <tr><td><span class="check">&#10003;</span></td><td>Transaction struct (name, id, Vec&lt;PropertySnapshot&gt;)</td><td><span class="crate-tag">cadora-document</span></td><td class="source-ref">App::Transaction</td></tr>
+      <tr><td><span class="check">&#10003;</span></td><td>open_transaction / commit_transaction / abort_transaction</td><td><span class="crate-tag">cadora-document</span></td><td class="source-ref">Document::openTransaction/commit/abort</td></tr>
+      <tr><td><span class="check">&#10003;</span></td><td>undo / redo (walk transaction, restore snapshots)</td><td><span class="crate-tag">cadora-document</span></td><td class="source-ref">Document::undo/redo</td></tr>
+      <tr><td><span class="check">&#10003;</span></td><td>Stack limits (max_undo count)</td><td><span class="crate-tag">cadora-document</span></td><td class="source-ref">Document::setMaxUndoStackSize</td></tr>
+      <tr><td><span class="check">&#10003;</span></td><td>Tests: open/commit, undo/redo, abort, limits — included in C3 document tests</td><td><span class="crate-tag">cadora-document</span></td><td class="source-ref">—</td></tr>
+    </table>
+  </div>
+</div>
+
+<!-- ==================== PHASE C6 ==================== -->
+<div class="phase">
+  <div class="phase-header" onclick="this.parentElement.classList.toggle('open')">
+    <h3><span class="arrow">&#9654;</span> C6 — Expression Engine <span class="phase-badge badge-done">Done</span></h3>
+    <span class="phase-pct">6 / 6</span>
+  </div>
+  <div class="phase-body">
+    <table>
+      <tr><th></th><th>Task</th><th>Crate</th><th>Source Reference</th></tr>
+      <tr><td><span class="check">&#10003;</span></td><td>Expression AST enum (Number, String, BinaryOp, UnaryOp, FunctionCall, PropertyRef, Conditional)</td><td><span class="crate-tag">cadora-document</span></td><td class="source-ref">Expression.h hierarchy</td></tr>
+      <tr><td><span class="check">&#10003;</span></td><td>Token lexer (numbers, identifiers, operators, parens)</td><td><span class="crate-tag">cadora-document</span></td><td class="source-ref">ExpressionParser.y lexer</td></tr>
+      <tr><td><span class="check">&#10003;</span></td><td>Recursive-descent parser (arithmetic + property refs + functions)</td><td><span class="crate-tag">cadora-document</span></td><td class="source-ref">ExpressionParser.y grammar</td></tr>
+      <tr><td><span class="check">&#10003;</span></td><td>Expression evaluator (evaluate AST to PropValue)</td><td><span class="crate-tag">cadora-document</span></td><td class="source-ref">Expression::eval()</td></tr>
+      <tr><td><span class="check">&#10003;</span></td><td>ExpressionEngine (bind expressions to properties, evaluate on recompute)</td><td><span class="crate-tag">cadora-document</span></td><td class="source-ref">PropertyExpressionEngine</td></tr>
+      <tr><td><span class="check">&#10003;</span></td><td>Tests: parse, evaluate, bindings, dependency tracking — 13 tests</td><td><span class="crate-tag">cadora-document</span></td><td class="source-ref">—</td></tr>
+    </table>
+  </div>
+</div>
+
+<!-- ==================== PHASE D ==================== -->
+<div class="phase">
+  <div class="phase-header" onclick="this.parentElement.classList.toggle('open')">
+    <h3><span class="arrow">&#9654;</span> D — Shape Kernel (BRep) <span class="phase-badge badge-todo">Todo</span></h3>
+    <span class="phase-pct">0 / 55</span>
+  </div>
+  <div class="phase-body">
+    <table>
+      <tr><th></th><th>Task</th><th>Crate</th><th>Source Reference</th></tr>
+      <tr><td><span class="pending">&#9744;</span></td><td>BRep core types (Vertex, Edge, Wire, Face, Shell, Solid, CompSolid, Compound)</td><td><span class="crate-tag">cadora-brep</span></td><td class="source-ref">TopoDS_Shape hierarchy</td></tr>
+      <tr><td><span class="pending">&#9744;</span></td><td>OCCT FFI bindings or pure-Rust BRep kernel decision</td><td><span class="crate-tag">cadora-brep</span></td><td class="source-ref">opencascade-rs or truck crate</td></tr>
+      <tr><td><span class="pending">&#9744;</span></td><td>Sketch → Wire conversion (profile extraction for extrusion)</td><td><span class="crate-tag">cadora-brep</span></td><td class="source-ref">Part::TopoShape::makeElementWires</td></tr>
+      <tr><td><span class="pending">&#9744;</span></td><td>Extrusion (Prism) operation</td><td><span class="crate-tag">cadora-brep</span></td><td class="source-ref">BRepPrimAPI_MakePrism</td></tr>
+      <tr><td><span class="pending">&#9744;</span></td><td>Revolution operation</td><td><span class="crate-tag">cadora-brep</span></td><td class="source-ref">BRepPrimAPI_MakeRevol</td></tr>
+      <tr><td><span class="pending">&#9744;</span></td><td>Boolean operations (fuse, cut, common)</td><td><span class="crate-tag">cadora-brep</span></td><td class="source-ref">BRepAlgoAPI_Fuse/Cut/Common</td></tr>
+      <tr><td><span class="pending">&#9744;</span></td><td>Fillet &amp; chamfer on 3D edges</td><td><span class="crate-tag">cadora-brep</span></td><td class="source-ref">BRepFilletAPI_MakeFillet/Chamfer</td></tr>
+      <tr><td><span class="pending">&#9744;</span></td><td>Tessellation (mesh from BRep for viewport rendering)</td><td><span class="crate-tag">cadora-brep</span></td><td class="source-ref">BRepMesh_IncrementalMesh</td></tr>
+    </table>
+  </div>
+</div>
+
+<!-- ==================== PHASE E ==================== -->
+<div class="phase">
+  <div class="phase-header" onclick="this.parentElement.classList.toggle('open')">
+    <h3><span class="arrow">&#9654;</span> E — Body &amp; Feature Framework <span class="phase-badge badge-todo">Todo</span></h3>
+    <span class="phase-pct">0 / 20</span>
+  </div>
+  <div class="phase-body">
+    <table>
+      <tr><th></th><th>Task</th><th>Crate</th><th>Source Reference</th></tr>
+      <tr><td><span class="pending">&#9744;</span></td><td>Body container (ordered feature list, tip, base feature)</td><td><span class="crate-tag">cadora-partdesign</span></td><td class="source-ref">PartDesign::Body</td></tr>
+      <tr><td><span class="pending">&#9744;</span></td><td>Feature base class (shape computation pipeline, recompute)</td><td><span class="crate-tag">cadora-partdesign</span></td><td class="source-ref">PartDesign::Feature</td></tr>
+      <tr><td><span class="pending">&#9744;</span></td><td>FeatureAddSub (additive/subtractive shape fusion/cut)</td><td><span class="crate-tag">cadora-partdesign</span></td><td class="source-ref">PartDesign::FeatureAddSub</td></tr>
+      <tr><td><span class="pending">&#9744;</span></td><td>ProfileBased (sketch + direction → 3D operation pipeline)</td><td><span class="crate-tag">cadora-partdesign</span></td><td class="source-ref">PartDesign::ProfileBased</td></tr>
+      <tr><td><span class="pending">&#9744;</span></td><td>Feature tree insertion/reordering/deletion</td><td><span class="crate-tag">cadora-partdesign</span></td><td class="source-ref">Body::insertObject, addObject</td></tr>
+    </table>
+  </div>
+</div>
+
+<!-- ==================== PHASE F ==================== -->
+<div class="phase">
+  <div class="phase-header" onclick="this.parentElement.classList.toggle('open')">
+    <h3><span class="arrow">&#9654;</span> F — PartDesign Operations <span class="phase-badge badge-todo">Todo</span></h3>
+    <span class="phase-pct">0 / 50</span>
+  </div>
+  <div class="phase-body">
+    <table>
+      <tr><th></th><th>Task</th><th>Crate</th><th>Source Reference</th></tr>
+      <tr><td><span class="pending">&#9744;</span></td><td>Pad (extrude sketch profile)</td><td><span class="crate-tag">cadora-partdesign</span></td><td class="source-ref">PartDesign::Pad</td></tr>
+      <tr><td><span class="pending">&#9744;</span></td><td>Pocket (subtract extrusion)</td><td><span class="crate-tag">cadora-partdesign</span></td><td class="source-ref">PartDesign::Pocket</td></tr>
+      <tr><td><span class="pending">&#9744;</span></td><td>Revolution (rotate sketch profile)</td><td><span class="crate-tag">cadora-partdesign</span></td><td class="source-ref">PartDesign::Revolution</td></tr>
+      <tr><td><span class="pending">&#9744;</span></td><td>Groove (subtract revolution)</td><td><span class="crate-tag">cadora-partdesign</span></td><td class="source-ref">PartDesign::Groove</td></tr>
+      <tr><td><span class="pending">&#9744;</span></td><td>Fillet &amp; Chamfer (3D dress-up)</td><td><span class="crate-tag">cadora-partdesign</span></td><td class="source-ref">PartDesign::Fillet, Chamfer</td></tr>
+      <tr><td><span class="pending">&#9744;</span></td><td>Draft (taper faces)</td><td><span class="crate-tag">cadora-partdesign</span></td><td class="source-ref">PartDesign::Draft</td></tr>
+      <tr><td><span class="pending">&#9744;</span></td><td>Thickness (hollow solid)</td><td><span class="crate-tag">cadora-partdesign</span></td><td class="source-ref">PartDesign::Thickness</td></tr>
+      <tr><td><span class="pending">&#9744;</span></td><td>Linear &amp; Polar pattern</td><td><span class="crate-tag">cadora-partdesign</span></td><td class="source-ref">PartDesign::LinearPattern, PolarPattern</td></tr>
+      <tr><td><span class="pending">&#9744;</span></td><td>Mirrored feature</td><td><span class="crate-tag">cadora-partdesign</span></td><td class="source-ref">PartDesign::Mirrored</td></tr>
+      <tr><td><span class="pending">&#9744;</span></td><td>Hole feature</td><td><span class="crate-tag">cadora-partdesign</span></td><td class="source-ref">PartDesign::Hole</td></tr>
+    </table>
+  </div>
+</div>
+
+<!-- ==================== PHASE G ==================== -->
+<div class="phase">
+  <div class="phase-header" onclick="this.parentElement.classList.toggle('open')">
+    <h3><span class="arrow">&#9654;</span> G — Datums &amp; Attachment <span class="phase-badge badge-todo">Todo</span></h3>
+    <span class="phase-pct">0 / 18</span>
+  </div>
+  <div class="phase-body">
+    <table>
+      <tr><th></th><th>Task</th><th>Crate</th><th>Source Reference</th></tr>
+      <tr><td><span class="pending">&#9744;</span></td><td>DatumPlane, DatumLine, DatumPoint</td><td><span class="crate-tag">cadora-partdesign</span></td><td class="source-ref">PartDesign::Datum*</td></tr>
+      <tr><td><span class="pending">&#9744;</span></td><td>Attachment engine (~40 modes: FlatFace, NormalToEdge, etc.)</td><td><span class="crate-tag">cadora-partdesign</span></td><td class="source-ref">Part::Attacher, AttachEngine</td></tr>
+      <tr><td><span class="pending">&#9744;</span></td><td>Coordinate system (local CS for features)</td><td><span class="crate-tag">cadora-partdesign</span></td><td class="source-ref">PartDesign::CoordinateSystem</td></tr>
+      <tr><td><span class="pending">&#9744;</span></td><td>ShapeBinder (reference geometry from other bodies)</td><td><span class="crate-tag">cadora-partdesign</span></td><td class="source-ref">PartDesign::ShapeBinder</td></tr>
+    </table>
+  </div>
+</div>
+
+<!-- ==================== PHASE H ==================== -->
+<div class="phase">
+  <div class="phase-header" onclick="this.parentElement.classList.toggle('open')">
+    <h3><span class="arrow">&#9654;</span> H — File Format &amp; Persistence <span class="phase-badge badge-todo">Todo</span></h3>
+    <span class="phase-pct">0 / 15</span>
+  </div>
+  <div class="phase-body">
+    <table>
+      <tr><th></th><th>Task</th><th>Crate</th><th>Source Reference</th></tr>
+      <tr><td><span class="pending">&#9744;</span></td><td>Project file format (.cadora — ZIP archive with JSON metadata + binary shapes)</td><td><span class="crate-tag">cadora-io</span></td><td class="source-ref">.FCStd format</td></tr>
+      <tr><td><span class="pending">&#9744;</span></td><td>STEP import/export</td><td><span class="crate-tag">cadora-io</span></td><td class="source-ref">Import/Export STEP</td></tr>
+      <tr><td><span class="pending">&#9744;</span></td><td>STL import/export (mesh)</td><td><span class="crate-tag">cadora-io</span></td><td class="source-ref">Mesh::MeshObject</td></tr>
+      <tr><td><span class="pending">&#9744;</span></td><td>IGES import (legacy support)</td><td><span class="crate-tag">cadora-io</span></td><td class="source-ref">Import IGES</td></tr>
+    </table>
+  </div>
+</div>
+
+<!-- ==================== PHASE I ==================== -->
+<div class="phase">
+  <div class="phase-header" onclick="this.parentElement.classList.toggle('open')">
+    <h3><span class="arrow">&#9654;</span> I — GUI &amp; 3D Viewport <span class="phase-badge badge-todo">Todo</span></h3>
+    <span class="phase-pct">0 / 65</span>
+  </div>
+  <div class="phase-body">
+    <table>
+      <tr><th></th><th>Task</th><th>Crate</th><th>Source Reference</th></tr>
+      <tr><td><span class="pending">&#9744;</span></td><td>wgpu-based 3D viewport (camera, projection, orbit/pan/zoom)</td><td><span class="crate-tag">cadora-gui</span></td><td class="source-ref">Coin3D View3DInventor → wgpu</td></tr>
+      <tr><td><span class="pending">&#9744;</span></td><td>Mesh rendering pipeline (triangulated BRep display)</td><td><span class="crate-tag">cadora-gui</span></td><td class="source-ref">SoFCSelection, SoBrepFaceSet</td></tr>
+      <tr><td><span class="pending">&#9744;</span></td><td>Edge &amp; wireframe rendering</td><td><span class="crate-tag">cadora-gui</span></td><td class="source-ref">SoBrepEdgeSet</td></tr>
+      <tr><td><span class="pending">&#9744;</span></td><td>Sketch editor overlay (2D drawing on sketch plane)</td><td><span class="crate-tag">cadora-gui</span></td><td class="source-ref">ViewProviderSketch, EditModeCoinManager</td></tr>
+      <tr><td><span class="pending">&#9744;</span></td><td>UI framework (egui or iced — Fusion 360 style sidebar + toolbar + tree)</td><td><span class="crate-tag">cadora-gui</span></td><td class="source-ref">Qt → egui/iced</td></tr>
+      <tr><td><span class="pending">&#9744;</span></td><td>Feature tree panel</td><td><span class="crate-tag">cadora-gui</span></td><td class="source-ref">TreeWidget / Model tree</td></tr>
+      <tr><td><span class="pending">&#9744;</span></td><td>Property panel</td><td><span class="crate-tag">cadora-gui</span></td><td class="source-ref">PropertyView</td></tr>
+      <tr><td><span class="pending">&#9744;</span></td><td>Selection &amp; highlighting (face/edge/vertex picking)</td><td><span class="crate-tag">cadora-gui</span></td><td class="source-ref">SoFCSelection, SelectionManager</td></tr>
     </table>
   </div>
 </div>
