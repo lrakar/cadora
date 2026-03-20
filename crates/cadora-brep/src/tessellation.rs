@@ -222,4 +222,77 @@ mod tests {
         };
         assert!(!mesh.is_valid());
     }
+
+    #[test]
+    fn tessellate_cylinder() {
+        let shape = make_cylinder(3.0, 5.0);
+        let params = TessellationParams::default();
+        let mesh = tessellate(&shape, &params);
+        assert!(!mesh.is_empty());
+        assert!(mesh.is_valid());
+        assert!(mesh.triangle_count() > 10);
+    }
+
+    #[test]
+    fn tessellate_cone() {
+        let shape = make_cone(5.0, 2.0, 8.0);
+        let params = TessellationParams::default();
+        let mesh = tessellate(&shape, &params);
+        assert!(!mesh.is_empty());
+        assert!(mesh.is_valid());
+    }
+
+    #[test]
+    fn tessellate_torus() {
+        let shape = make_torus(10.0, 3.0);
+        let params = TessellationParams::default();
+        let mesh = tessellate(&shape, &params);
+        assert!(!mesh.is_empty());
+        assert!(mesh.is_valid());
+    }
+
+    #[test]
+    fn tessellate_small_box() {
+        let shape = make_box(0.01, 0.01, 0.01);
+        let params = TessellationParams { u_divisions: 2, v_divisions: 2 };
+        let mesh = tessellate(&shape, &params);
+        assert!(!mesh.is_empty());
+        assert!(mesh.is_valid());
+    }
+
+    #[test]
+    fn tessellate_high_resolution() {
+        let shape = make_box(1.0, 1.0, 1.0);
+        let params = TessellationParams { u_divisions: 32, v_divisions: 32 };
+        let mesh = tessellate(&shape, &params);
+        assert!(mesh.triangle_count() > 100);
+        assert!(mesh.is_valid());
+    }
+
+    #[test]
+    fn mesh_empty() {
+        let mesh = Mesh {
+            positions: vec![],
+            indices: vec![],
+            normals: vec![],
+        };
+        assert!(mesh.is_empty());
+        assert!(mesh.is_valid());
+        assert_eq!(mesh.vertex_count(), 0);
+        assert_eq!(mesh.triangle_count(), 0);
+    }
+
+    #[test]
+    fn tessellation_params_default() {
+        let params = TessellationParams::default();
+        assert_eq!(params.u_divisions, 16);
+        assert_eq!(params.v_divisions, 16);
+    }
+
+    #[test]
+    fn mesh_normals_same_length_as_positions() {
+        let shape = make_box(5.0, 5.0, 5.0);
+        let mesh = tessellate(&shape, &TessellationParams::default());
+        assert_eq!(mesh.normals.len(), mesh.positions.len());
+    }
 }

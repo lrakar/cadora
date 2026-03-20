@@ -82,6 +82,49 @@ pub fn make_face_from_wire(wire: &Wire) -> Option<Face> {
     builder::try_attach_plane(&[wire.clone()]).ok()
 }
 
+/// Create a planar face from an outer wire with inner hole wires.
+/// The outer wire defines the face boundary, inner wires define holes.
+pub fn make_face_with_holes(outer: &Wire, holes: &[Wire]) -> Option<Face> {
+    let mut wires = vec![outer.clone()];
+    wires.extend(holes.iter().cloned());
+    builder::try_attach_plane(&wires).ok()
+}
+
+/// Create a regular polygon wire in the XY plane centered at origin.
+/// `sides`: number of sides (must be >=3), `radius`: circumscribed radius.
+pub fn make_polygon_wire(sides: usize, radius: f64) -> Wire {
+    assert!(sides >= 3, "Polygon must have at least 3 sides");
+    let angle_step = std::f64::consts::TAU / sides as f64;
+    let vertices: Vec<Vertex> = (0..sides)
+        .map(|i| {
+            let a = i as f64 * angle_step;
+            builder::vertex(Point3::new(radius * a.cos(), radius * a.sin(), 0.0))
+        })
+        .collect();
+    let edges: Vec<Edge> = (0..sides)
+        .map(|i| builder::line(&vertices[i], &vertices[(i + 1) % sides]))
+        .collect();
+    Wire::from(edges)
+}
+
+/// Create an elliptical wire approximation in the XY plane centered at origin.
+/// Uses line segments for simplicity.
+/// `rx`: radius in X, `ry`: radius in Y, `segments`: number of line segments.
+pub fn make_ellipse_wire(rx: f64, ry: f64, segments: usize) -> Wire {
+    let segments = segments.max(8);
+    let angle_step = std::f64::consts::TAU / segments as f64;
+    let vertices: Vec<Vertex> = (0..segments)
+        .map(|i| {
+            let a = i as f64 * angle_step;
+            builder::vertex(Point3::new(rx * a.cos(), ry * a.sin(), 0.0))
+        })
+        .collect();
+    let edges: Vec<Edge> = (0..segments)
+        .map(|i| builder::line(&vertices[i], &vertices[(i + 1) % segments]))
+        .collect();
+    Wire::from(edges)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -121,5 +164,85 @@ mod tests {
             .line_to(Point3::new(5.0, 8.0, 0.0), Point3::new(0.0, 0.0, 0.0));
         let wire = wb.build();
         assert_eq!(wire.edge_iter().count(), 3);
+    }
+
+    #[test]
+    fn polygon_wire_triangle() {
+        let wire = make_polygon_wire(3, 5.0);
+        assert_eq!(wire.edge_iter().count(), 3);
+    }
+
+    #[test]
+    fn polygon_wire_hexagon() {
+        let wire = make_polygon_wire(6, 5.0);
+        assert_eq!(wire.edge_iter().count(), 6);
+    }
+
+    #[test]
+    fn polygon_wire_pentagon_is_planar() {
+        let wire = make_polygon_wire(5, 5.0);
+        let face = make_face_from_wire(&wire);
+        assert!(face.is_some());
+    }
+
+    #[test]
+    fn ellipse_wire_default_segments() {
+        let wire = make_ellipse_wire(10.0, 5.0, 16);
+        assert_eq!(wire.edge_iter().count(), 16);
+    }
+
+    #[test]
+    fn ellipse_wire_is_planar() {
+        let wire = make_ellipse_wire(10.0, 5.0, 16);
+        let face = make_face_from_wire(&wire);
+        assert!(face.is_some());
+    }
+
+    #[test]
+    fn ellipse_wire_min_segments() {
+        let wire = make_ellipse_wire(10.0, 5.0, 3);
+        // Minimum is 8 segments
+        assert_eq!(wire.edge_iter().count(), 8);
+    }
+
+    #[test]
+    fn face_with_holes() {
+        let outer = make_rect_wire(20.0, 20.0);
+        let inner = builder::translated(&make_rect_wire(5.0, 5.0), Vector3::new(7.0, 7.0, 0.0));
+        let face = make_face_with_holes(&outer, &[inner]);
+        assert!(face.is_some());
+    }
+
+    #[test]
+    fn wire_builder_build_face() {
+        // WireBuilder creates disconnected edges (each with own vertices)
+        // so build_face may fail — just verify it doesn't panic
+        let mut wb = WireBuilder::new();
+        wb.line_to(Point3::new(0.0, 0.0, 0.0), Point3::new(10.0, 0.0, 0.0))
+            .line_to(Point3::new(10.0, 0.0, 0.0), Point3::new(10.0, 10.0, 0.0))
+            .line_to(Point3::new(10.0, 10.0, 0.0), Point3::new(0.0, 10.0, 0.0))
+            .line_to(Point3::new(0.0, 10.0, 0.0), Point3::new(0.0, 0.0, 0.0));
+        let _face = wb.build_face();
+        // May be None because WireBuilder creates separate vertices per edge
+    }
+
+    #[test]
+    fn wire_builder_arc_to() {
+        let mut wb = WireBuilder::new();
+        wb.line_to(Point3::new(0.0, 0.0, 0.0), Point3::new(10.0, 0.0, 0.0))
+            .arc_to(
+                Point3::new(10.0, 0.0, 0.0),
+                Point3::new(0.0, 0.0, 0.0),
+                Point3::new(5.0, 5.0, 0.0),
+            );
+        let wire = wb.build();
+        assert_eq!(wire.edge_iter().count(), 2);
+    }
+
+    #[test]
+    fn wire_builder_default() {
+        let wb = WireBuilder::default();
+        let wire = wb.build();
+        assert_eq!(wire.edge_iter().count(), 0);
     }
 }

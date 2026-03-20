@@ -205,4 +205,59 @@ mod tests {
         assert_relative_eq!(bb.min.z, -3.0, epsilon = 0.5);
         assert_relative_eq!(bb.max.z, 3.0, epsilon = 0.5);
     }
+
+    #[test]
+    fn box_face_count_and_edge_count() {
+        let shape = make_box(5.0, 5.0, 5.0);
+        assert_eq!(shape.face_count(), 6);
+        assert_eq!(shape.edge_count(), 24); // 6 faces * 4 edges per face
+    }
+
+    #[test]
+    fn cylinder_basic() {
+        let shape = make_cylinder(5.0, 10.0);
+        let bb = shape.bounding_box();
+        assert_relative_eq!(bb.min.z, 0.0, epsilon = 0.5);
+        assert_relative_eq!(bb.max.z, 10.0, epsilon = 0.5);
+        assert_relative_eq!(bb.min.x, -5.0, epsilon = 1.0);
+        assert_relative_eq!(bb.max.x, 5.0, epsilon = 1.0);
+    }
+
+    #[test]
+    #[should_panic(expected = "Cylinder radius must be positive")]
+    fn cylinder_zero_radius_panics() {
+        make_cylinder(0.0, 5.0);
+    }
+
+    #[test]
+    fn sphere_face_count() {
+        let shape = make_sphere(5.0);
+        assert!(shape.face_count() >= 3, "Sphere should have multiple faces from rsweep");
+    }
+
+    #[test]
+    fn box_shell_count() {
+        let shape = make_box(5.0, 5.0, 5.0);
+        assert_eq!(shape.shell_count(), 1);
+    }
+
+    #[test]
+    fn cylinder_shell_count() {
+        let shape = make_cylinder(5.0, 10.0);
+        assert_eq!(shape.shell_count(), 1);
+    }
+
+    #[test]
+    fn large_box() {
+        let shape = make_box(1000.0, 1000.0, 1000.0);
+        let bb = shape.bounding_box();
+        assert_relative_eq!(bb.max.x, 1000.0, epsilon = 1.0);
+    }
+
+    #[test]
+    fn small_box() {
+        let shape = make_box(0.001, 0.001, 0.001);
+        let bb = shape.bounding_box();
+        assert_relative_eq!(bb.max.x, 0.001, epsilon = 0.0005);
+    }
 }

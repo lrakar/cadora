@@ -151,6 +151,21 @@ impl Shape {
             })
             .sum()
     }
+
+    /// Count the number of shells (boundaries) in the shape.
+    pub fn shell_count(&self) -> usize {
+        self.inner.boundaries().len()
+    }
+
+    /// Get the approximate surface area via tessellation.
+    pub fn surface_area(&self) -> f64 {
+        crate::operations::surface_area(self, 16)
+    }
+
+    /// Get the approximate center of mass via tessellation.
+    pub fn center_of_mass(&self) -> [f64; 3] {
+        crate::operations::center_of_mass(self, 16)
+    }
 }
 
 /// Axis-aligned bounding box.
@@ -227,5 +242,119 @@ mod tests {
         assert!((bb.volume() - 48.0).abs() < 1e-10);
         assert!(bb.contains(&Vec3::new(0.0, 0.0, 0.0)));
         assert!(!bb.contains(&Vec3::new(2.0, 0.0, 0.0)));
+    }
+
+    fn make_test_box() -> Shape {
+        let v = builder::vertex(Point3::new(0.0, 0.0, 0.0));
+        let e = builder::tsweep(&v, Vector3::new(10.0, 0.0, 0.0));
+        let f = builder::tsweep(&e, Vector3::new(0.0, 5.0, 0.0));
+        let s: Solid = builder::tsweep(&f, Vector3::new(0.0, 0.0, 3.0));
+        Shape::from_solid(s)
+    }
+
+    #[test]
+    fn shape_face_count() {
+        let shape = make_test_box();
+        assert_eq!(shape.face_count(), 6);
+    }
+
+    #[test]
+    fn shape_edge_count() {
+        let shape = make_test_box();
+        assert_eq!(shape.edge_count(), 24); // 6 faces * 4 edges each (with shared edges counted per face)
+    }
+
+    #[test]
+    fn shape_shell_count() {
+        let shape = make_test_box();
+        assert_eq!(shape.shell_count(), 1);
+    }
+
+    #[test]
+    fn shape_bounding_box_of_box() {
+        let shape = make_test_box();
+        let bb = shape.bounding_box();
+        assert!((bb.min.x - 0.0).abs() < 0.1);
+        assert!((bb.min.y - 0.0).abs() < 0.1);
+        assert!((bb.min.z - 0.0).abs() < 0.1);
+        assert!((bb.max.x - 10.0).abs() < 0.1);
+        assert!((bb.max.y - 5.0).abs() < 0.1);
+        assert!((bb.max.z - 3.0).abs() < 0.1);
+    }
+
+    #[test]
+    fn shape_bounding_box_size() {
+        let shape = make_test_box();
+        let bb = shape.bounding_box();
+        let s = bb.size();
+        assert!((s.x - 10.0).abs() < 0.2);
+        assert!((s.y - 5.0).abs() < 0.2);
+        assert!((s.z - 3.0).abs() < 0.2);
+    }
+
+    #[test]
+    fn shape_bounding_box_center() {
+        let shape = make_test_box();
+        let bb = shape.bounding_box();
+        let c = bb.center();
+        assert!((c.x - 5.0).abs() < 0.2);
+        assert!((c.y - 2.5).abs() < 0.2);
+        assert!((c.z - 1.5).abs() < 0.2);
+    }
+
+    #[test]
+    fn shape_bounding_box_volume() {
+        let shape = make_test_box();
+        let bb = shape.bounding_box();
+        let vol = bb.volume();
+        assert!((vol - 150.0).abs() < 2.0); // 10*5*3 = 150
+    }
+
+    #[test]
+    fn shape_bounding_box_contains_center() {
+        let shape = make_test_box();
+        let bb = shape.bounding_box();
+        assert!(bb.contains(&Vec3::new(5.0, 2.5, 1.5)));
+    }
+
+    #[test]
+    fn shape_bounding_box_excludes_outside() {
+        let shape = make_test_box();
+        let bb = shape.bounding_box();
+        assert!(!bb.contains(&Vec3::new(20.0, 0.0, 0.0)));
+    }
+
+    #[test]
+    fn shape_surface_area_box() {
+        let shape = make_test_box();
+        let area = shape.surface_area();
+        // Box 10x5x3: area = 2*(10*5 + 10*3 + 5*3) = 2*(50+30+15) = 190
+        assert!((area - 190.0).abs() < 20.0, "area={area}, expected ~190");
+    }
+
+    #[test]
+    fn shape_center_of_mass_box() {
+        let shape = make_test_box();
+        let com = shape.center_of_mass();
+        // Box from (0,0,0) to (10,5,3) → center at (5, 2.5, 1.5)
+        assert!((com[0] - 5.0).abs() < 1.0, "cx={}, expected ~5", com[0]);
+        assert!((com[1] - 2.5).abs() < 1.0, "cy={}, expected ~2.5", com[1]);
+        assert!((com[2] - 1.5).abs() < 1.0, "cz={}, expected ~1.5", com[2]);
+    }
+
+    #[test]
+    fn shape_from_solid_roundtrip() {
+        let shape = make_test_box();
+        let solid = shape.clone().into_solid();
+        let shape2 = Shape::from_solid(solid);
+        assert_eq!(shape2.face_count(), 6);
+    }
+
+    #[test]
+    fn shape_type_variants() {
+        assert_ne!(ShapeType::Vertex, ShapeType::Edge);
+        assert_ne!(ShapeType::Wire, ShapeType::Face);
+        assert_ne!(ShapeType::Shell, ShapeType::Solid);
+        assert_ne!(ShapeType::Compound, ShapeType::Vertex);
     }
 }
