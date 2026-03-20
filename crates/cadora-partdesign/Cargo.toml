@@ -1,0 +1,14 @@
+[package]
+name = "cadora-partdesign"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "PartDesign feature framework for CADORA CAD (Body, Feature, Pad, Pocket, etc.)"
+
+[dependencies]
+cadora-brep = { path = "../cadora-brep" }
+truck-modeling = "0.6"
+
+[dev-dependencies]
+approx = { workspace = true }
