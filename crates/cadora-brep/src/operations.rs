@@ -2341,14 +2341,42 @@ pub fn defeature(
     shape: &Shape,
     min_feature_size: f64,
 ) -> std::result::Result<Shape, String> {
-    // Simplified approach: find faces smaller than the threshold
-    // and fill them by expanding the shape's bounding box slightly
     let bb = shape.bounding_box();
     let size = bb.size();
+    let min_dim = size.x.min(size.y).min(size.z);
+    let threshold_area = min_feature_size * min_feature_size;
 
-    // If the feature is very small relative to the shape, approximate
-    // by applying a slight scale + boolean common to smooth small features
-    let scale_factor = 1.0 + (min_feature_size / size.x.min(size.y).min(size.z));
+    // Phase 1: Detect small faces by area (like OCCT's face selection)
+    let shell = &shape.solid().boundaries()[0];
+    let faces: Vec<&Face> = shell.face_iter().collect();
+    let mut small_face_count = 0;
+
+    for face in &faces {
+        let surface = face.oriented_surface();
+        let (urange, vrange) = crate::tessellation::surface_parameter_range_pub(&surface);
+        // Estimate face area from parameter range (approximate)
+        let du = urange.1 - urange.0;
+        let dv = vrange.1 - vrange.0;
+        // Sample a few points to estimate actual area
+        let p00 = surface.subs(urange.0, vrange.0);
+        let p10 = surface.subs(urange.1, vrange.0);
+        let p01 = surface.subs(urange.0, vrange.1);
+        let side_u = ((p10.x - p00.x).powi(2) + (p10.y - p00.y).powi(2) + (p10.z - p00.z).powi(2)).sqrt();
+        let side_v = ((p01.x - p00.x).powi(2) + (p01.y - p00.y).powi(2) + (p01.z - p00.z).powi(2)).sqrt();
+        let approx_area = side_u * side_v;
+        if approx_area < threshold_area && approx_area > 0.0 {
+            small_face_count += 1;
+        }
+        let _ = (du, dv); // suppress warning
+    }
+
+    if small_face_count == 0 {
+        // No small features detected — shape is already clean
+        return Ok(shape.clone());
+    }
+
+    // Phase 2: Simplify by scale + boolean common (removes small protrusions)
+    let scale_factor = 1.0 + (min_feature_size / min_dim).min(0.1);
     let com = center_of_mass(shape, 16);
     let center = Point3::new(com[0], com[1], com[2]);
 
@@ -2441,11 +2469,14 @@ pub fn point_on_face(
     }
     let face = faces[face_idx];
     let surface = face.oriented_surface();
-
-    // Sample the surface and check if any point is close to the query point
-    let steps = 16;
     let (urange, vrange) = crate::tessellation::surface_parameter_range_pub(&surface);
     let tol2 = tolerance * tolerance;
+
+    // Phase 1: Coarse grid to find starting (u,v)
+    let steps = 16;
+    let mut best_u = (urange.0 + urange.1) * 0.5;
+    let mut best_v = (vrange.0 + vrange.1) * 0.5;
+    let mut best_d2 = f64::MAX;
 
     for ui in 0..=steps {
         for vi in 0..=steps {
@@ -2455,12 +2486,60 @@ pub fn point_on_face(
             let dx = sp.x - point.x;
             let dy = sp.y - point.y;
             let dz = sp.z - point.z;
-            if dx * dx + dy * dy + dz * dz < tol2 {
-                return true;
+            let d2 = dx * dx + dy * dy + dz * dz;
+            if d2 < best_d2 {
+                best_d2 = d2;
+                best_u = u;
+                best_v = v;
             }
         }
     }
-    false
+
+    // Phase 2: Newton refinement (OCCT Extrema_ExtPS algorithm)
+    let eps = 1e-8;
+    let mut u = best_u;
+    let mut v = best_v;
+    for _ in 0..20 {
+        let s = surface.subs(u, v);
+        let diff_x = s.x - point.x;
+        let diff_y = s.y - point.y;
+        let diff_z = s.z - point.z;
+
+        let su_p = surface.subs(u + eps, v);
+        let su_m = surface.subs(u - eps, v);
+        let su_x = (su_p.x - su_m.x) / (2.0 * eps);
+        let su_y = (su_p.y - su_m.y) / (2.0 * eps);
+        let su_z = (su_p.z - su_m.z) / (2.0 * eps);
+
+        let sv_p = surface.subs(u, v + eps);
+        let sv_m = surface.subs(u, v - eps);
+        let sv_x = (sv_p.x - sv_m.x) / (2.0 * eps);
+        let sv_y = (sv_p.y - sv_m.y) / (2.0 * eps);
+        let sv_z = (sv_p.z - sv_m.z) / (2.0 * eps);
+
+        let a11 = su_x * su_x + su_y * su_y + su_z * su_z;
+        let a12 = su_x * sv_x + su_y * sv_y + su_z * sv_z;
+        let a22 = sv_x * sv_x + sv_y * sv_y + sv_z * sv_z;
+        let b1 = -(su_x * diff_x + su_y * diff_y + su_z * diff_z);
+        let b2 = -(sv_x * diff_x + sv_y * diff_y + sv_z * diff_z);
+
+        let det = a11 * a22 - a12 * a12;
+        if det.abs() < 1e-20 { break; }
+
+        let du = (b1 * a22 - b2 * a12) / det;
+        let dv = (a11 * b2 - a12 * b1) / det;
+
+        u = (u + du).clamp(urange.0, urange.1);
+        v = (v + dv).clamp(vrange.0, vrange.1);
+
+        if du.abs() < 1e-12 && dv.abs() < 1e-12 { break; }
+    }
+
+    let final_point = surface.subs(u, v);
+    let dx = final_point.x - point.x;
+    let dy = final_point.y - point.y;
+    let dz = final_point.z - point.z;
+    dx * dx + dy * dy + dz * dz < tol2
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -2558,32 +2637,99 @@ pub fn plane_plane_intersection(
 // ═══════════════════════════════════════════════════════════════════
 
 /// Project a point onto a shape's nearest surface.
-/// Based on OCCT's `BRepOffsetAPI_NormalProjection`: finds the closest
-/// point on the shape's surface by tessellation sampling.
+/// Based on OCCT's `Extrema_ExtPS` algorithm:
+/// 1. Coarse grid sampling of each face's (u,v) parameter space
+/// 2. Newton iteration to refine: solve ∂||S(u,v)-P||²/∂u = 0,
+///    ∂||S(u,v)-P||²/∂v = 0 using finite-difference Jacobian
 /// Returns the closest projected point found.
 pub fn project_point_to_shape(
     shape: &Shape,
     point: Point3,
 ) -> Option<Point3> {
-    let mesh = crate::tessellation::tessellate(
-        shape,
-        &crate::tessellation::TessellationParams {
-            u_divisions: 16,
-            v_divisions: 16,
-        },
-    );
-
+    let shell = &shape.solid().boundaries()[0];
     let mut closest_dist2 = f64::MAX;
     let mut closest_point = None;
 
-    for pos in &mesh.positions {
-        let dx = pos[0] - point.x;
-        let dy = pos[1] - point.y;
-        let dz = pos[2] - point.z;
+    for face in shell.face_iter() {
+        let surface = face.oriented_surface();
+        let (urange, vrange) = crate::tessellation::surface_parameter_range_pub(&surface);
+
+        // Phase 1: Coarse grid sampling to find starting (u,v)
+        let steps = 16;
+        let mut best_u = (urange.0 + urange.1) * 0.5;
+        let mut best_v = (vrange.0 + vrange.1) * 0.5;
+        let mut best_d2 = f64::MAX;
+
+        for ui in 0..=steps {
+            for vi in 0..=steps {
+                let u = urange.0 + (urange.1 - urange.0) * (ui as f64 / steps as f64);
+                let v = vrange.0 + (vrange.1 - vrange.0) * (vi as f64 / steps as f64);
+                let sp = surface.subs(u, v);
+                let dx = sp.x - point.x;
+                let dy = sp.y - point.y;
+                let dz = sp.z - point.z;
+                let d2 = dx * dx + dy * dy + dz * dz;
+                if d2 < best_d2 {
+                    best_d2 = d2;
+                    best_u = u;
+                    best_v = v;
+                }
+            }
+        }
+
+        // Phase 2: Newton refinement (OCCT Extrema algorithm)
+        // Minimise f(u,v) = ||S(u,v) - P||²
+        // ∇f = 0 → Sᵤ·(S-P) = 0, Sᵥ·(S-P) = 0
+        let eps = 1e-8;
+        let mut u = best_u;
+        let mut v = best_v;
+        for _ in 0..20 {
+            let s = surface.subs(u, v);
+            let diff_x = s.x - point.x;
+            let diff_y = s.y - point.y;
+            let diff_z = s.z - point.z;
+
+            // Partial derivatives via central finite differences
+            let su_p = surface.subs(u + eps, v);
+            let su_m = surface.subs(u - eps, v);
+            let su_x = (su_p.x - su_m.x) / (2.0 * eps);
+            let su_y = (su_p.y - su_m.y) / (2.0 * eps);
+            let su_z = (su_p.z - su_m.z) / (2.0 * eps);
+
+            let sv_p = surface.subs(u, v + eps);
+            let sv_m = surface.subs(u, v - eps);
+            let sv_x = (sv_p.x - sv_m.x) / (2.0 * eps);
+            let sv_y = (sv_p.y - sv_m.y) / (2.0 * eps);
+            let sv_z = (sv_p.z - sv_m.z) / (2.0 * eps);
+
+            // 2×2 system: [Sᵤ·Sᵤ  Sᵤ·Sᵥ][du] = [-Sᵤ·diff]
+            //              [Sᵥ·Sᵤ  Sᵥ·Sᵥ][dv]   [-Sᵥ·diff]
+            let a11 = su_x * su_x + su_y * su_y + su_z * su_z;
+            let a12 = su_x * sv_x + su_y * sv_y + su_z * sv_z;
+            let a22 = sv_x * sv_x + sv_y * sv_y + sv_z * sv_z;
+            let b1 = -(su_x * diff_x + su_y * diff_y + su_z * diff_z);
+            let b2 = -(sv_x * diff_x + sv_y * diff_y + sv_z * diff_z);
+
+            let det = a11 * a22 - a12 * a12;
+            if det.abs() < 1e-20 { break; }
+
+            let du = (b1 * a22 - b2 * a12) / det;
+            let dv = (a11 * b2 - a12 * b1) / det;
+
+            u = (u + du).clamp(urange.0, urange.1);
+            v = (v + dv).clamp(vrange.0, vrange.1);
+
+            if du.abs() < 1e-12 && dv.abs() < 1e-12 { break; }
+        }
+
+        let final_point = surface.subs(u, v);
+        let dx = final_point.x - point.x;
+        let dy = final_point.y - point.y;
+        let dz = final_point.z - point.z;
         let d2 = dx * dx + dy * dy + dz * dz;
         if d2 < closest_dist2 {
             closest_dist2 = d2;
-            closest_point = Some(Point3::new(pos[0], pos[1], pos[2]));
+            closest_point = Some(Point3::new(final_point.x, final_point.y, final_point.z));
         }
     }
 
@@ -2664,16 +2810,47 @@ pub fn count_internal_wires(shape: &Shape) -> usize {
 //  replacement scenarios.
 // ═══════════════════════════════════════════════════════════════════
 
-/// Replace a face in a shape by boolean fusion with a new shape.
-/// Based on OCCT's `BRepTools_ReShape`: adds new_shape geometry
-/// onto the existing shape via boolean fusion.
+/// Replace a face in a shape by topology modification.
+/// Based on OCCT's `BRepTools_ReShape`: replaces the face at `old_face_idx`
+/// with faces from `new_shape`, then attempts to rebuild the solid.
+/// Falls back to boolean fusion if topology reconstruction fails.
 pub fn replace_face(
     shape: &Shape,
-    _old_face_idx: usize,
+    old_face_idx: usize,
     new_shape: &Shape,
 ) -> std::result::Result<Shape, BooleanError> {
-    // Simplified approach: fuse the new shape onto the existing one
-    boolean(shape, new_shape, BooleanOp::Fuse)
+    let shell = &shape.solid().boundaries()[0];
+    let faces: Vec<Face> = shell.face_iter().cloned().collect();
+
+    if old_face_idx >= faces.len() {
+        return boolean(shape, new_shape, BooleanOp::Fuse);
+    }
+
+    let new_shell = &new_shape.solid().boundaries()[0];
+    let new_faces: Vec<Face> = new_shell.face_iter().cloned().collect();
+    if new_faces.is_empty() {
+        return boolean(shape, new_shape, BooleanOp::Fuse);
+    }
+
+    // Try topology replacement: replace old face with new face(s)
+    let mut all_faces: Vec<Face> = Vec::new();
+    for (i, face) in faces.iter().enumerate() {
+        if i == old_face_idx {
+            // Insert all faces from new shape at this position
+            all_faces.extend(new_faces.iter().cloned());
+        } else {
+            all_faces.push(face.clone());
+        }
+    }
+
+    let replaced_shell = Shell::from(all_faces);
+    match Solid::try_new(vec![replaced_shell]) {
+        Ok(solid) => Ok(Shape::from_solid(solid)),
+        Err(_) => {
+            // If topology isn't closed, fall back to boolean fusion
+            boolean(shape, new_shape, BooleanOp::Fuse)
+        }
+    }
 }
 
 #[cfg(test)]
