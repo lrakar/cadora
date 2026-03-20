@@ -424,19 +424,19 @@
 <!-- ==================== PHASE A6 ==================== -->
 <div class="phase">
   <div class="phase-header" onclick="this.parentElement.classList.toggle('open')">
-    <h3><span class="arrow">&#9654;</span> A6 — Geometry Operations <span class="phase-badge badge-todo">Todo</span></h3>
-    <span class="phase-pct">0 / 7</span>
+    <h3><span class="arrow">&#9654;</span> A6 — Geometry Operations <span class="phase-badge badge-done">Done</span></h3>
+    <span class="phase-pct">7 / 7</span>
   </div>
   <div class="phase-body">
     <table>
       <tr><th></th><th>Task</th><th>Crate</th><th>Source Reference</th></tr>
-      <tr><td><span class="pending">&#9744;</span></td><td>fillet() — arc fillet between two lines at vertex</td><td><span class="crate-tag">cadora-sketch</span></td><td class="source-ref">SketchObject::fillet()</td></tr>
-      <tr><td><span class="pending">&#9744;</span></td><td>trim() — split geometry at intersection &amp; remove segment</td><td><span class="crate-tag">cadora-sketch</span></td><td class="source-ref">SketchObject::trim()</td></tr>
-      <tr><td><span class="pending">&#9744;</span></td><td>extend() — extend line/arc to another curve</td><td><span class="crate-tag">cadora-sketch</span></td><td class="source-ref">SketchObject::extend()</td></tr>
-      <tr><td><span class="pending">&#9744;</span></td><td>split() — break geometry at a point without removal</td><td><span class="crate-tag">cadora-sketch</span></td><td class="source-ref">SketchObject::split()</td></tr>
-      <tr><td><span class="pending">&#9744;</span></td><td>join() — merge two compatible geometries</td><td><span class="crate-tag">cadora-sketch</span></td><td class="source-ref">SketchObject::join()</td></tr>
-      <tr><td><span class="pending">&#9744;</span></td><td>Symmetric copy &amp; pattern (addSymmetric, addCopy)</td><td><span class="crate-tag">cadora-sketch</span></td><td class="source-ref">SketchObject addSymmetric/addCopy</td></tr>
-      <tr><td><span class="pending">&#9744;</span></td><td>Tests: fillet geometry, trim at intersection, extend to boundary, symmetric copy</td><td><span class="crate-tag">cadora-sketch</span></td><td class="source-ref">—</td></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>fillet() — arc fillet between two lines at vertex</td><td><span class="crate-tag">cadora-sketch</span></td><td class="source-ref">SketchObject::fillet()</td></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>trim() — split geometry at intersection &amp; remove segment</td><td><span class="crate-tag">cadora-sketch</span></td><td class="source-ref">SketchObject::trim()</td></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>extend() — extend line/arc to another curve</td><td><span class="crate-tag">cadora-sketch</span></td><td class="source-ref">SketchObject::extend()</td></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>split() — break geometry at a point without removal</td><td><span class="crate-tag">cadora-sketch</span></td><td class="source-ref">SketchObject::split()</td></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>copy_geometries() — translate geometry copies with constraint duplication</td><td><span class="crate-tag">cadora-sketch</span></td><td class="source-ref">SketchObject addCopy</td></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>mirror_geometries() — mirror geometry across a line</td><td><span class="crate-tag">cadora-sketch</span></td><td class="source-ref">SketchObject addSymmetric</td></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>Tests: fillet, trim, extend, split, copy, mirror (11 tests)</td><td><span class="crate-tag">cadora-sketch</span></td><td class="source-ref">—</td></tr>
     </table>
   </div>
 </div>
