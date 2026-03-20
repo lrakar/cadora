@@ -616,20 +616,20 @@
 <!-- ==================== D ==================== -->
 <div class="phase">
   <div class="phase-header" onclick="this.parentElement.classList.toggle('open')">
-    <h3><span class="arrow">&#9654;</span> D &mdash; Shape Kernel (BRep) <span class="phase-badge badge-todo">Todo</span></h3>
-    <span class="phase-pct">0 / 8</span>
+    <h3><span class="arrow">&#9654;</span> D &mdash; Shape Kernel (BRep) <span class="phase-badge badge-progress">In Progress</span></h3>
+    <span class="phase-pct">6 / 8</span>
   </div>
   <div class="phase-body">
     <table>
       <tr><th></th><th>Task</th><th>Crate</th><th>Source Reference</th></tr>
-      <tr><td><span class="pending">&#9744;</span></td><td>BRep core types (Vertex, Edge, Wire, Face, Shell, Solid, CompSolid, Compound)</td><td><span class="crate-tag">cadora-brep</span></td><td class="source-ref">TopoDS_Shape hierarchy</td></tr>
-      <tr><td><span class="pending">&#9744;</span></td><td>OCCT FFI bindings or pure-Rust BRep kernel decision</td><td><span class="crate-tag">cadora-brep</span></td><td class="source-ref">opencascade-rs or truck crate</td></tr>
-      <tr><td><span class="pending">&#9744;</span></td><td>Sketch &rarr; Wire conversion (profile extraction for extrusion)</td><td><span class="crate-tag">cadora-brep</span></td><td class="source-ref">Part::TopoShape::makeElementWires</td></tr>
-      <tr><td><span class="pending">&#9744;</span></td><td>Extrusion (Prism) operation</td><td><span class="crate-tag">cadora-brep</span></td><td class="source-ref">BRepPrimAPI_MakePrism</td></tr>
-      <tr><td><span class="pending">&#9744;</span></td><td>Revolution operation</td><td><span class="crate-tag">cadora-brep</span></td><td class="source-ref">BRepPrimAPI_MakeRevol</td></tr>
-      <tr><td><span class="pending">&#9744;</span></td><td>Boolean operations (fuse, cut, common)</td><td><span class="crate-tag">cadora-brep</span></td><td class="source-ref">BRepAlgoAPI_Fuse/Cut/Common</td></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>BRep core types (Shape, BoundingBox, Vec3, ShapeType) wrapping truck</td><td><span class="crate-tag">cadora-brep</span></td><td class="source-ref">truck-modeling 0.6 &middot; shape.rs</td></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>Pure-Rust BRep kernel: truck-modeling 0.6 (no OCCT required)</td><td><span class="crate-tag">cadora-brep</span></td><td class="source-ref">truck crate ecosystem</td></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>Wire builder &amp; primitives (box, cylinder, sphere, cone, torus)</td><td><span class="crate-tag">cadora-brep</span></td><td class="source-ref">builder.rs, primitives.rs</td></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>Extrusion (tsweep) operation</td><td><span class="crate-tag">cadora-brep</span></td><td class="source-ref">operations.rs &middot; BRepPrimAPI_MakePrism</td></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>Revolution (rsweep) operation</td><td><span class="crate-tag">cadora-brep</span></td><td class="source-ref">operations.rs &middot; BRepPrimAPI_MakeRevol</td></tr>
+      <tr><td><span class="pending">&#9744;</span></td><td>Boolean operations (fuse, cut, common) &mdash; blocked by truck-shapeops 0.4 incompatibility</td><td><span class="crate-tag">cadora-brep</span></td><td class="source-ref">BRepAlgoAPI_Fuse/Cut/Common</td></tr>
       <tr><td><span class="pending">&#9744;</span></td><td>Fillet &amp; chamfer on 3D edges</td><td><span class="crate-tag">cadora-brep</span></td><td class="source-ref">BRepFilletAPI_MakeFillet/Chamfer</td></tr>
-      <tr><td><span class="pending">&#9744;</span></td><td>Tessellation (mesh from BRep for viewport rendering)</td><td><span class="crate-tag">cadora-brep</span></td><td class="source-ref">BRepMesh_IncrementalMesh</td></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>Tessellation (mesh from BRep for viewport rendering)</td><td><span class="crate-tag">cadora-brep</span></td><td class="source-ref">tessellation.rs &middot; BRepMesh analog</td></tr>
     </table>
   </div>
 </div>

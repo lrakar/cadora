@@ -11,6 +11,7 @@ members = [
     "crates/cadora-system",
     "crates/cadora-sketch",
     "crates/cadora-document",
+    "crates/cadora-brep",
 ]
 
 [workspace.package]
@@ -49,6 +50,7 @@ cadora-diagnosis = { path = "crates/cadora-diagnosis" }
 cadora-system = { path = "crates/cadora-system" }
 cadora-sketch = { path = "crates/cadora-sketch" }
 cadora-document = { path = "crates/cadora-document" }
+cadora-brep = { path = "crates/cadora-brep" }
 
 [profile.release]
 lto = true

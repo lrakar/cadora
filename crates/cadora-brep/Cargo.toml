@@ -1,0 +1,15 @@
+[package]
+name = "cadora-brep"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "BRep shape kernel for CADORA CAD"
+
+[dependencies]
+nalgebra = { workspace = true }
+truck-topology = "0.6"
+truck-modeling = "0.6"
+
+[dev-dependencies]
+approx = { workspace = true }
