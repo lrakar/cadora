@@ -388,17 +388,17 @@
 <!-- ==================== PHASE A4 ==================== -->
 <div class="phase">
   <div class="phase-header" onclick="this.parentElement.classList.toggle('open')">
-    <h3><span class="arrow">&#9654;</span> A4 — Interactive Editing &amp; Dragging <span class="phase-badge badge-todo">Todo</span></h3>
-    <span class="phase-pct">0 / 5</span>
+    <h3><span class="arrow">&#9654;</span> A4 — Interactive Editing &amp; Dragging <span class="phase-badge badge-done">Done</span></h3>
+    <span class="phase-pct">5 / 5</span>
   </div>
   <div class="phase-body">
     <table>
       <tr><th></th><th>Task</th><th>Crate</th><th>Source Reference</th></tr>
-      <tr><td><span class="pending">&#9744;</span></td><td>init_temporary_move() — set up temp constraints for interactive drag</td><td><span class="crate-tag">cadora-sketch</span></td><td class="source-ref">SketchObject::initTemporaryMove()</td></tr>
-      <tr><td><span class="pending">&#9744;</span></td><td>move_geometry_temporary() — update drag point, re-solve incrementally</td><td><span class="crate-tag">cadora-sketch</span></td><td class="source-ref">SketchObject::moveGeometryTemporary()</td></tr>
-      <tr><td><span class="pending">&#9744;</span></td><td>Coincidence groups (getCoincidenceGroups, arePointsCoincident)</td><td><span class="crate-tag">cadora-sketch</span></td><td class="source-ref">SketchObject coincidence methods</td></tr>
-      <tr><td><span class="pending">&#9744;</span></td><td>Point-on-curve hit testing (isPointOnCurve, closest point on geometry)</td><td><span class="crate-tag">cadora-sketch</span></td><td class="source-ref">SketchObject::isPointOnCurve()</td></tr>
-      <tr><td><span class="pending">&#9744;</span></td><td>Tests: drag + solve, coincidence detection, hit testing</td><td><span class="crate-tag">cadora-sketch</span></td><td class="source-ref">—</td></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>move_temporary() / move_geometry_temporary() — temp DistanceX/Y constraints + re-solve</td><td><span class="crate-tag">cadora-sketch</span></td><td class="source-ref">editing.rs — Sketch::move_temporary()</td></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>movable_points() — collect draggable points per geometry type</td><td><span class="crate-tag">cadora-sketch</span></td><td class="source-ref">editing.rs — Sketch::movable_points()</td></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>Coincidence groups (get_coincidence_groups, are_points_coincident) — union-find</td><td><span class="crate-tag">cadora-sketch</span></td><td class="source-ref">editing.rs — Sketch::get_coincidence_groups()</td></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>is_point_on_curve() + closest_geometry() — line/circle/arc hit testing</td><td><span class="crate-tag">cadora-sketch</span></td><td class="source-ref">editing.rs — Sketch::is_point_on_curve()</td></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>Tests: drag + solve, coincidence detection, hit testing, closest geometry (10 tests)</td><td><span class="crate-tag">cadora-sketch</span></td><td class="source-ref">editing.rs tests</td></tr>
     </table>
   </div>
 </div>
@@ -406,17 +406,17 @@
 <!-- ==================== PHASE A5 ==================== -->
 <div class="phase">
   <div class="phase-header" onclick="this.parentElement.classList.toggle('open')">
-    <h3><span class="arrow">&#9654;</span> A5 — Auto-Constraints <span class="phase-badge badge-todo">Todo</span></h3>
-    <span class="phase-pct">0 / 5</span>
+    <h3><span class="arrow">&#9654;</span> A5 — Auto-Constraints <span class="phase-badge badge-done">Done</span></h3>
+    <span class="phase-pct">5 / 5</span>
   </div>
   <div class="phase-body">
     <table>
       <tr><th></th><th>Task</th><th>Crate</th><th>Source Reference</th></tr>
-      <tr><td><span class="pending">&#9744;</span></td><td>Detect coincident points (within precision tolerance)</td><td><span class="crate-tag">cadora-sketch</span></td><td class="source-ref">SketchAnalysis detectMissingPointOnPoint</td></tr>
-      <tr><td><span class="pending">&#9744;</span></td><td>Detect vertical/horizontal lines (near-axis alignment)</td><td><span class="crate-tag">cadora-sketch</span></td><td class="source-ref">SketchAnalysis detectVerticalHorizontal</td></tr>
-      <tr><td><span class="pending">&#9744;</span></td><td>Detect equal-length segments &amp; equal radii</td><td><span class="crate-tag">cadora-sketch</span></td><td class="source-ref">SketchAnalysis detectMissingEquality</td></tr>
-      <tr><td><span class="pending">&#9744;</span></td><td>Auto-apply detected constraints + auto-remove redundants</td><td><span class="crate-tag">cadora-sketch</span></td><td class="source-ref">SketchAnalysis makeMissing + autoRemove</td></tr>
-      <tr><td><span class="pending">&#9744;</span></td><td>Tests: auto-detect accuracy, false positive prevention, redundancy cleanup</td><td><span class="crate-tag">cadora-sketch</span></td><td class="source-ref">—</td></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>detect_missing_coincident() — sorted-sweep + tolerance per-axis matching</td><td><span class="crate-tag">cadora-sketch</span></td><td class="source-ref">analysis.rs — Sketch::detect_missing_coincident()</td></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>detect_missing_vertical_horizontal() — angle-based detection with tolerance</td><td><span class="crate-tag">cadora-sketch</span></td><td class="source-ref">analysis.rs — Sketch::detect_missing_vertical_horizontal()</td></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>detect_missing_equality() — sorted line lengths + circle radii comparison</td><td><span class="crate-tag">cadora-sketch</span></td><td class="source-ref">analysis.rs — Sketch::detect_missing_equality()</td></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>apply_detected_constraints() + auto_remove_redundants() — batch apply + cleanup</td><td><span class="crate-tag">cadora-sketch</span></td><td class="source-ref">analysis.rs — Sketch::apply_detected_constraints()</td></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>Tests: detect accuracy, false positive prevention, redundancy cleanup (12 tests)</td><td><span class="crate-tag">cadora-sketch</span></td><td class="source-ref">analysis.rs tests</td></tr>
     </table>
   </div>
 </div>

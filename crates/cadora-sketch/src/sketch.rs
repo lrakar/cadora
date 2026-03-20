@@ -44,14 +44,14 @@ pub struct SketchDiagnosis {
 /// Manages geometry and constraints, translates them to GCS-level objects,
 /// and invokes the solver.
 pub struct Sketch {
-    store: GeometryStore,
-    constraints: Vec<SketchConstraint>,
+    pub(crate) store: GeometryStore,
+    pub(crate) constraints: Vec<SketchConstraint>,
     next_tag: i32,
     solver_config: SolverConfig,
     /// Last solve status.
-    last_status: Option<SketchSolveStatus>,
+    pub(crate) last_status: Option<SketchSolveStatus>,
     /// Last diagnosis result.
-    last_diagnosis: Option<SketchDiagnosis>,
+    pub(crate) last_diagnosis: Option<SketchDiagnosis>,
 }
 
 impl Sketch {

@@ -7,8 +7,11 @@ pub mod types;
 pub mod geometry;
 pub mod constraint;
 pub mod sketch;
+pub mod editing;
+pub mod analysis;
 
 pub use types::*;
 pub use geometry::GeoDef;
 pub use constraint::SketchConstraint;
 pub use sketch::Sketch;
+pub use analysis::DetectedConstraint;
