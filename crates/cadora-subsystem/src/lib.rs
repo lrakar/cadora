@@ -64,7 +64,15 @@ impl SubSystem {
             }
         }
 
-        // Intersect free_params with constraint params (preserving order).
+        // Also include all params involved in the reduction map (both keys and values).
+        // These may not appear in any remaining constraint but still need
+        // to be synchronized by the SubSystem.
+        for (&replaced, &target) in reduction {
+            constraint_param_set.insert(replaced);
+            constraint_param_set.insert(target);
+        }
+
+        // Intersect free_params with constraint+reduction params (preserving order).
         let relevant: Vec<ParamIdx> = free_params
             .iter()
             .filter(|p| constraint_param_set.contains(p))
@@ -105,7 +113,7 @@ impl SubSystem {
         }
 
         // Clone the global store for isolated solver work.
-        let store = global_store.clone();
+        let mut store = global_store.clone();
 
         // Build adjacency lists.
         let csize = constraints.len();
@@ -129,6 +137,14 @@ impl SubSystem {
         let mut slot_members = vec![Vec::new(); psize];
         for (&p, &slot) in &idx_map {
             slot_members[slot].push(p);
+        }
+
+        // Synchronize merged params: set all members to the representative's value.
+        for (i, rep) in param_list.iter().enumerate() {
+            let val = store.get(*rep);
+            for &member in &slot_members[i] {
+                store.set(member, val);
+            }
         }
 
         Self {
@@ -247,7 +263,10 @@ impl SubSystem {
         (r, err)
     }
 
-    /// Jacobian matrix  J[i,j] = constraint_i.grad(store, param_list[j]).
+    /// Jacobian matrix  J[i,j] = Σ_{p in slot_j} constraint_i.grad(store, p).
+    ///
+    /// When reduction is active, a slot may represent multiple original params.
+    /// The Jacobian sums their partial derivatives (chain rule for merged params).
     ///
     /// Returns a flat row-major buffer of size `c_size() × p_size()`.
     pub fn calc_jacobi(&self) -> Vec<f64> {
@@ -255,9 +274,10 @@ impl SubSystem {
         let psize = self.param_list.len();
         let mut j = vec![0.0; csize * psize];
         for col in 0..psize {
-            let p = self.param_list[col];
-            for row in 0..csize {
-                j[row * psize + col] = self.constraints[row].grad(&self.store, p);
+            for &member in &self.slot_members[col] {
+                for row in 0..csize {
+                    j[row * psize + col] += self.constraints[row].grad(&self.store, member);
+                }
             }
         }
         j
@@ -266,14 +286,16 @@ impl SubSystem {
     /// Gradient vector  grad[j] = Σ_i  r_i · J_{i,j}.
     ///
     /// Uses the sparse p2c adjacency for efficiency (matches C++ implementation).
+    /// When reduction is active, sums gradients over all slot members.
     pub fn calc_grad(&self) -> Vec<f64> {
         let psize = self.param_list.len();
         let mut grad = vec![0.0; psize];
         for j in 0..psize {
-            let p = self.param_list[j];
-            for &ci in &self.p2c[j] {
-                let c = &self.constraints[ci];
-                grad[j] += c.error(&self.store) * c.grad(&self.store, p);
+            for &member in &self.slot_members[j] {
+                for &ci in &self.p2c[j] {
+                    let c = &self.constraints[ci];
+                    grad[j] += c.error(&self.store) * c.grad(&self.store, member);
+                }
             }
         }
         grad

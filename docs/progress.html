@@ -77,8 +77,8 @@
 <!-- Overall progress -->
 <div class="overall">
   <h2>Overall Progress</h2>
-  <div class="bar-outer"><div class="bar-inner" id="overallBar" style="width:4%"></div></div>
-  <div class="pct"><span id="overallPct">3</span> / 79 tasks complete</div>
+  <div class="bar-outer"><div class="bar-inner" id="overallBar" style="width:75%"></div></div>
+  <div class="pct"><span id="overallPct">59</span> / 79 tasks complete</div>
 </div>
 
 <!-- ==================== PHASE 0 ==================== -->
@@ -275,17 +275,17 @@
 <!-- ==================== PHASE 9 ==================== -->
 <div class="phase">
   <div class="phase-header" onclick="this.parentElement.classList.toggle('open')">
-    <h3><span class="arrow">&#9654;</span> Phase 9 — Integration &amp; Performance <span class="phase-badge badge-todo">Not Started</span></h3>
-    <span class="phase-pct">0 / 5</span>
+    <h3><span class="arrow">&#9654;</span> Phase 9 — Integration &amp; Performance <span class="phase-badge badge-done">DONE</span></h3>
+    <span class="phase-pct">5 / 5</span>
   </div>
   <div class="phase-body">
     <table>
       <tr><th></th><th>Task</th><th>Crate</th><th>Source Reference</th></tr>
-      <tr><td><span class="pending">&#9675;</span></td><td>End-to-end integration tests (full sketch scenarios)</td><td><span class="crate-tag">cadora-system</span></td><td class="source-ref">TestSketcherSolver.py scenarios</td></tr>
-      <tr><td><span class="pending">&#9675;</span></td><td>Performance benchmarks vs C++ planegcs</td><td><span class="crate-tag">benches</span></td><td class="source-ref">—</td></tr>
-      <tr><td><span class="pending">&#9675;</span></td><td>Parallelization audit (rayon, work-stealing)</td><td><span class="crate-tag">cadora-solvers</span></td><td class="source-ref">—</td></tr>
-      <tr><td><span class="pending">&#9675;</span></td><td>Memory optimization audit (allocation-free hot paths)</td><td><span class="crate-tag">all</span></td><td class="source-ref">—</td></tr>
-      <tr><td><span class="pending">&#9675;</span></td><td>API documentation + architecture guide</td><td><span class="crate-tag">all</span></td><td class="source-ref">—</td></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>End-to-end integration tests (8 scenarios: rectangle, triangle, multi-component, diagnosis, re-solve, algorithm comparison, point-on-line)</td><td><span class="crate-tag">cadora-system</span></td><td class="source-ref">TestSketcherSolver.py scenarios</td></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>Performance benchmarks (criterion: chain, grid, algorithm comparison, multi-component, init_solution)</td><td><span class="crate-tag">cadora-system</span></td><td class="source-ref">benches/solver_bench.rs</td></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>Parallelization audit (rayon opportunities documented, inner-loop overhead analysis)</td><td><span class="crate-tag">docs</span></td><td class="source-ref">docs/parallelization_audit.md</td></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>Memory optimization audit (hot-path allocation analysis, buffer reuse recommendations)</td><td><span class="crate-tag">docs</span></td><td class="source-ref">docs/memory_audit.md</td></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>API documentation + architecture guide (crate-level rustdoc, architecture.md, updated README)</td><td><span class="crate-tag">all</span></td><td class="source-ref">docs/architecture.md</td></tr>
     </table>
   </div>
 </div>

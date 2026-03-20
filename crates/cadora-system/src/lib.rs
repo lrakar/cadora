@@ -245,12 +245,15 @@ impl System {
     ///
     /// For each driving Equal constraint with ratio == 1.0, merges the two
     /// parameters (the second is replaced by the first).
+    ///
+    /// Returns `(reduction_maps, consumed_constraint_indices)`.
     fn build_reduction_maps(
         &self,
         num_components: usize,
         constraint_components: &[usize],
-    ) -> Vec<ReductionMap> {
+    ) -> (Vec<ReductionMap>, HashSet<usize>) {
         let mut reductions = vec![ReductionMap::new(); num_components];
+        let mut consumed = HashSet::new();
 
         let active: Vec<&Box<dyn Constraint>> = self.constraints.iter()
             .filter_map(|opt| opt.as_ref())
@@ -260,6 +263,9 @@ impl System {
         // Uses union-find-style chaining: if a→b and b→c, then a→c and b→c.
         let mut reduced_to: HashMap<ParamIdx, ParamIdx> = HashMap::new();
 
+        // Only reduce params that are actually unknowns
+        let unknown_set: HashSet<ParamIdx> = self.param_list.iter().copied().collect();
+
         for (ci, c) in active.iter().enumerate() {
             if !c.is_driving() || c.tag() < 0 {
                 continue;
@@ -268,16 +274,12 @@ impl System {
             if params.len() != 2 {
                 continue;
             }
-            // Check if this is an Equal constraint by testing:
-            // error = p1 - p2 when p1 = 1, p2 = 0 should give 1
-            // and error = p1 - p2 when p1 = 0, p2 = 1 should give -1
-            // This is a heuristic; true type-based dispatch would be better.
-            // For now, use the fact that an Equal constraint with ratio=1 has
-            // grad(p1) = 1 and grad(p2) = -1.
-            //
-            // Actually, let's check if the constraint produces the pattern of
-            // an equality: we only reduce when grad w.r.t. p1 = +scale and
-            // grad w.r.t. p2 = -scale for some nonzero scale.
+            // Both params must be unknowns for reduction to apply
+            if !unknown_set.contains(&params[0]) || !unknown_set.contains(&params[1]) {
+                continue;
+            }
+            // Check if the constraint has equality-like gradients:
+            // grad(p1) = +scale, grad(p2) = -scale for some nonzero scale.
             let g1 = c.grad(&self.store, params[0]);
             let g2 = c.grad(&self.store, params[1]);
             if (g1 + g2).abs() > 1e-12 || g1.abs() < 1e-12 {
@@ -299,6 +301,7 @@ impl System {
             if p_kept != p_replaced {
                 reduced_to.insert(p_replaced, p_kept);
                 reductions[comp].insert(p_replaced, p_kept);
+                consumed.insert(ci);
             }
         }
 
@@ -315,7 +318,7 @@ impl System {
             }
         }
 
-        reductions
+        (reductions, consumed)
     }
 
     // -----------------------------------------------------------------------
@@ -341,8 +344,9 @@ impl System {
         let (constraint_components, param_components, num_components) =
             self.partition_graph();
 
-        // Build reduction maps
-        let reductions = self.build_reduction_maps(num_components, &constraint_components);
+        // Build reduction maps (also returns indices of consumed Equal constraints)
+        let (reductions, consumed_indices) =
+            self.build_reduction_maps(num_components, &constraint_components);
 
         // Build component info
         let mut components: Vec<ComponentInfo> = (0..num_components)
@@ -365,9 +369,9 @@ impl System {
             comp.params.sort();
         }
 
-        // Assign constraints to components
+        // Assign constraints to components, excluding those consumed by reduction
         for (ci, &orig_idx) in active_indices.iter().enumerate() {
-            if ci < constraint_components.len() {
+            if ci < constraint_components.len() && !consumed_indices.contains(&ci) {
                 let comp_id = constraint_components[ci];
                 let c = self.constraints[orig_idx].as_ref().unwrap();
                 if c.is_driving() {
