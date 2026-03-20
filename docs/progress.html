@@ -200,17 +200,17 @@
 <!-- ==================== PHASE 5 ==================== -->
 <div class="phase">
   <div class="phase-header" onclick="this.parentElement.classList.toggle('open')">
-    <h3><span class="arrow">&#9654;</span> Phase 5 — SubSystem <span class="phase-badge badge-todo">Not Started</span></h3>
-    <span class="phase-pct">0 / 5</span>
+    <h3><span class="arrow">&#9654;</span> Phase 5 — SubSystem <span class="phase-badge badge-done">DONE</span></h3>
+    <span class="phase-pct">5 / 5</span>
   </div>
   <div class="phase-body">
     <table>
       <tr><th></th><th>Task</th><th>Crate</th><th>Source Reference</th></tr>
-      <tr><td><span class="pending">&#9675;</span></td><td>SubSystem struct (pvals, pmap, constraint list)</td><td><span class="crate-tag">cadora-subsystem</span></td><td class="source-ref">SubSystem.cpp:1-80</td></tr>
-      <tr><td><span class="pending">&#9675;</span></td><td>Parameter redirection (redirect / revert / apply)</td><td><span class="crate-tag">cadora-subsystem</span></td><td class="source-ref">SubSystem.cpp:80-180</td></tr>
-      <tr><td><span class="pending">&#9675;</span></td><td>calcJacobi (dense Jacobian evaluation)</td><td><span class="crate-tag">cadora-subsystem</span></td><td class="source-ref">SubSystem.cpp:180-250</td></tr>
-      <tr><td><span class="pending">&#9675;</span></td><td>calcGrad (p2c adjacency-based gradient)</td><td><span class="crate-tag">cadora-subsystem</span></td><td class="source-ref">SubSystem.cpp:250-310</td></tr>
-      <tr><td><span class="pending">&#9675;</span></td><td>Unit tests + cross-validation vs C++</td><td><span class="crate-tag">cadora-subsystem</span></td><td class="source-ref">—</td></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>SubSystem struct (working store, param_list, idx_map, adjacency)</td><td><span class="crate-tag">cadora-subsystem</span></td><td class="source-ref">SubSystem.cpp:1-80</td></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>Parameter isolation (sync_from, apply_solution, get/set_params)</td><td><span class="crate-tag">cadora-subsystem</span></td><td class="source-ref">SubSystem.cpp:80-180</td></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>calcJacobi (dense Jacobian) + calcResidual</td><td><span class="crate-tag">cadora-subsystem</span></td><td class="source-ref">SubSystem.cpp:180-250</td></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>calcGrad (p2c adjacency) + lineSearch</td><td><span class="crate-tag">cadora-subsystem</span></td><td class="source-ref">SubSystem.cpp:250-310, GCS.cpp lineSearch</td></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>12 unit tests (sizes, get/set, residual, jacobi, grad, J^T*r, reduction, line search)</td><td><span class="crate-tag">cadora-subsystem</span></td><td class="source-ref">—</td></tr>
     </table>
   </div>
 </div>
