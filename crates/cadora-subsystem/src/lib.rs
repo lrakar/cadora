@@ -29,6 +29,10 @@ pub struct SubSystem {
     c2p: Vec<Vec<usize>>,
     /// Local param index → constraint indices that use it.
     p2c: Vec<Vec<usize>>,
+    /// For each representative param, the list of ALL original ParamIdx values
+    /// that map to that slot (including the representative itself).
+    /// Used by set_params to keep merged params in sync.
+    slot_members: Vec<Vec<ParamIdx>>,
 }
 
 impl SubSystem {
@@ -121,6 +125,12 @@ impl SubSystem {
             }
         }
 
+        // Build slot_members: for each slot, all original ParamIdx that map to it.
+        let mut slot_members = vec![Vec::new(); psize];
+        for (&p, &slot) in &idx_map {
+            slot_members[slot].push(p);
+        }
+
         Self {
             constraints,
             param_list,
@@ -128,6 +138,7 @@ impl SubSystem {
             store,
             c2p,
             p2c,
+            slot_members,
         }
     }
 
@@ -172,24 +183,38 @@ impl SubSystem {
     }
 
     /// Write a dense vector into the working store's subsystem params.
+    /// When reduction is active, also updates all merged params that share
+    /// the same slot so that constraint evaluations see consistent values.
     pub fn set_params(&mut self, x: &[f64]) {
         assert_eq!(x.len(), self.param_list.len());
-        for (i, &p) in self.param_list.iter().enumerate() {
-            self.store.set(p, x[i]);
+        for (i, _) in self.param_list.iter().enumerate() {
+            let val = x[i];
+            // Set all params that map to this slot
+            for &member in &self.slot_members[i] {
+                self.store.set(member, val);
+            }
         }
     }
 
     /// Copy current global-store values into the working store (C++ redirectParams copy step).
+    /// Also propagates representative values to all merged params.
     pub fn sync_from(&mut self, global_store: &ParamStore) {
-        for &p in &self.param_list {
-            self.store.set(p, global_store.get(p));
+        for (i, &p) in self.param_list.iter().enumerate() {
+            let val = global_store.get(p);
+            for &member in &self.slot_members[i] {
+                self.store.set(member, val);
+            }
         }
     }
 
     /// Copy solution from working store back to the global store (C++ applySolution).
+    /// Writes all merged params so the global store is consistent.
     pub fn apply_solution(&self, global_store: &mut ParamStore) {
-        for &p in &self.param_list {
-            global_store.set(p, self.store.get(p));
+        for (i, _) in self.param_list.iter().enumerate() {
+            let val = self.store.get(self.param_list[i]);
+            for &member in &self.slot_members[i] {
+                global_store.set(member, val);
+            }
         }
     }
 
@@ -260,6 +285,11 @@ impl SubSystem {
     /// be added when arc/angle wrapping constraints are ported.
     pub fn max_step(&self, _xdir: &[f64]) -> f64 {
         1e10
+    }
+
+    /// Consume the subsystem and return its owned constraints.
+    pub fn into_constraints(self) -> Vec<Box<dyn Constraint>> {
+        self.constraints
     }
 }
 

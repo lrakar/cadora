@@ -3,7 +3,7 @@
 //! Numerical solvers: BFGS, Levenberg-Marquardt, DogLeg, dual-system SQP.
 //! Port of planegcs solver methods from `GCS.cpp`.
 
-use cadora_core::{DogLegGaussStep, SolveStatus, SolverConfig, SMALL_F};
+use cadora_core::{DogLegGaussStep, SolveStatus, SolverConfig, SMALL_F, X_CONVERGENCE_ROUGH};
 use cadora_subsystem::SubSystem;
 use nalgebra::{DMatrix, DVector};
 
@@ -225,7 +225,7 @@ pub fn solve_lm(
                         stop = 3;
                         break;
                     }
-                    if _h_norm >= (x_norm + eps1) / (f64::EPSILON * f64::EPSILON) {
+                    if _h_norm >= (x_norm + X_CONVERGENCE_ROUGH) / (f64::EPSILON * f64::EPSILON) {
                         stop = 4;
                         break;
                     }
@@ -355,7 +355,14 @@ pub fn solve_dl(
         let neg_fx = -&fx;
         let h_gn = match config.dog_leg_gauss_step {
             DogLegGaussStep::FullPivLu => {
-                jx.clone().full_piv_lu().solve(&neg_fx).unwrap_or_else(|| DVector::zeros(xsize))
+                if jx.nrows() == jx.ncols() {
+                    jx.clone().full_piv_lu().solve(&neg_fx).unwrap_or_else(|| DVector::zeros(xsize))
+                } else {
+                    // Non-square: use normal equations J^T*J * h = J^T * (-fx)
+                    let jtj = jx.transpose() * &jx;
+                    let jt_neg_fx = jx.transpose() * &neg_fx;
+                    jtj.full_piv_lu().solve(&jt_neg_fx).unwrap_or_else(|| DVector::zeros(xsize))
+                }
             }
             DogLegGaussStep::LeastNormFullPivLu => {
                 let jjt = &jx * jx.transpose();
