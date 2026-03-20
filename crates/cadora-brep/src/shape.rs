@@ -189,7 +189,7 @@ impl BoundingBox {
 }
 
 /// Get the parameter range for an edge curve.
-fn edge_curve_range(curve: &truck_modeling::Curve) -> (f64, f64) {
+pub(crate) fn edge_curve_range(curve: &truck_modeling::Curve) -> (f64, f64) {
     match curve {
         Curve::Line(_) => (0.0, 1.0),
         Curve::BSplineCurve(bsp) => {

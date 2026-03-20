@@ -614,10 +614,10 @@
 <p class="subtitle">Next milestones: BRep Kernel &rarr; Body/Features &rarr; PartDesign &rarr; Datums &rarr; File I/O &rarr; GUI</p>
 
 <!-- ==================== D ==================== -->
-<div class="phase">
+<div class="phase open">
   <div class="phase-header" onclick="this.parentElement.classList.toggle('open')">
-    <h3><span class="arrow">&#9654;</span> D &mdash; Shape Kernel (BRep) <span class="phase-badge badge-progress">In Progress</span></h3>
-    <span class="phase-pct">6 / 8</span>
+    <h3><span class="arrow">&#9654;</span> D &mdash; Shape Kernel (BRep) <span class="phase-badge badge-done">Done</span></h3>
+    <span class="phase-pct">8 / 8</span>
   </div>
   <div class="phase-body">
     <table>
@@ -627,8 +627,8 @@
       <tr><td><span class="done">&#9745;</span></td><td>Wire builder &amp; primitives (box, cylinder, sphere, cone, torus)</td><td><span class="crate-tag">cadora-brep</span></td><td class="source-ref">builder.rs, primitives.rs</td></tr>
       <tr><td><span class="done">&#9745;</span></td><td>Extrusion (tsweep) operation</td><td><span class="crate-tag">cadora-brep</span></td><td class="source-ref">operations.rs &middot; BRepPrimAPI_MakePrism</td></tr>
       <tr><td><span class="done">&#9745;</span></td><td>Revolution (rsweep) operation</td><td><span class="crate-tag">cadora-brep</span></td><td class="source-ref">operations.rs &middot; BRepPrimAPI_MakeRevol</td></tr>
-      <tr><td><span class="pending">&#9744;</span></td><td>Boolean operations (fuse, cut, common) &mdash; blocked by truck-shapeops 0.4 incompatibility</td><td><span class="crate-tag">cadora-brep</span></td><td class="source-ref">BRepAlgoAPI_Fuse/Cut/Common</td></tr>
-      <tr><td><span class="pending">&#9744;</span></td><td>Fillet &amp; chamfer on 3D edges</td><td><span class="crate-tag">cadora-brep</span></td><td class="source-ref">BRepFilletAPI_MakeFillet/Chamfer</td></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>Boolean operations (fuse, cut, common) via truck-shapeops 0.4</td><td><span class="crate-tag">cadora-brep</span></td><td class="source-ref">operations.rs &middot; BRepAlgoAPI_Fuse/Cut/Common</td></tr>
+      <tr><td><span class="done">&#9745;</span></td><td>Fillet &amp; chamfer on 3D edges</td><td><span class="crate-tag">cadora-brep</span></td><td class="source-ref">operations.rs &middot; BRepFilletAPI_MakeFillet/Chamfer</td></tr>
       <tr><td><span class="done">&#9745;</span></td><td>Tessellation (mesh from BRep for viewport rendering)</td><td><span class="crate-tag">cadora-brep</span></td><td class="source-ref">tessellation.rs &middot; BRepMesh analog</td></tr>
     </table>
   </div>
