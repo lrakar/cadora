@@ -1,0 +1,16 @@
+[package]
+name = "cadora-sketch"
+description = "Sketch manager — geometry, constraints, solver integration (FreeCAD SketchObject equivalent)"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+cadora-core = { workspace = true }
+cadora-geo = { workspace = true }
+cadora-constraints = { workspace = true }
+cadora-system = { workspace = true }
+
+[dev-dependencies]
+approx = { workspace = true }
