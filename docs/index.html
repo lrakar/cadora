@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>CADORA — Solver Porting Progress</title>
+<title>CADORA — Development Progress</title>
 <style>
   :root {
     --bg: #0d1117; --surface: #161b22; --border: #30363d;
@@ -65,8 +65,8 @@
 <body>
 <div class="container">
 
-<h1>CADORA Solver — Porting Progress</h1>
-<p class="subtitle">planegcs (C++ 13,251 loc) &rarr; cadora-solver (Rust) &bull; Modular, tested, documented</p>
+<h1>CADORA — Development Progress</h1>
+<p class="subtitle">FreeCAD alternative with Fusion 360 UX &bull; Fully open-source &bull; Written in Rust</p>
 
 <div class="legend">
   <span><span class="dot dot-done"></span> Done</span>
@@ -290,6 +290,177 @@
   </div>
 </div>
 
+<!-- ================================================================== -->
+<!-- SKETCH MANAGER — NEW SECTION                                       -->
+<!-- ================================================================== -->
+<h1 style="margin-top:3rem;">Sketch Manager — Phase A</h1>
+<p class="subtitle">SketchObject / Sketch layer &bull; FreeCAD SketchObject.cpp + Sketch.cpp &rarr; cadora-sketch (Rust)</p>
+
+<!-- Overall Sketch Manager progress -->
+<div class="overall">
+  <h2>Sketch Manager Progress</h2>
+  <div class="bar-outer"><div class="bar-inner" id="sketchBar" style="width:0%"></div></div>
+  <div class="pct"><span id="sketchPct">0</span> / 54 tasks complete</div>
+</div>
+
+<!-- ==================== PHASE A0 ==================== -->
+<div class="phase open">
+  <div class="phase-header" onclick="this.parentElement.classList.toggle('open')">
+    <h3><span class="arrow">&#9654;</span> A0 — Core Types &amp; Identification <span class="phase-badge badge-todo">Todo</span></h3>
+    <span class="phase-pct">0 / 7</span>
+  </div>
+  <div class="phase-body">
+    <table>
+      <tr><th></th><th>Task</th><th>Crate</th><th>Source Reference</th></tr>
+      <tr><td><span class="pending">&#9744;</span></td><td>GeoId type (i32: &ge;0 internal, -1 H-axis, -2 V-axis, &le;-3 external)</td><td><span class="crate-tag">cadora-sketch</span></td><td class="source-ref">Constraint.h GeoId</td></tr>
+      <tr><td><span class="pending">&#9744;</span></td><td>PointPos enum (None, Start, End, Mid)</td><td><span class="crate-tag">cadora-sketch</span></td><td class="source-ref">Constraint.h PointPos</td></tr>
+      <tr><td><span class="pending">&#9744;</span></td><td>GeoElementId struct (GeoId + PointPos)</td><td><span class="crate-tag">cadora-sketch</span></td><td class="source-ref">Constraint.h GeoElementId</td></tr>
+      <tr><td><span class="pending">&#9744;</span></td><td>ConstraintType enum (21 types: Coincident, Horizontal, Vertical, Parallel, Tangent, Perpendicular, Equal, PointOnObject, Symmetric, InternalAlignment, Distance, DistanceX, DistanceY, Angle, Radius, Diameter, SnellsLaw, Weight, Block, Group, Text)</td><td><span class="crate-tag">cadora-sketch</span></td><td class="source-ref">Constraint.h ConstraintType enum</td></tr>
+      <tr><td><span class="pending">&#9744;</span></td><td>SketchConstraint data model (type, elements, value, isDriving, isActive, tag UUID)</td><td><span class="crate-tag">cadora-sketch</span></td><td class="source-ref">Constraint.h/cpp</td></tr>
+      <tr><td><span class="pending">&#9744;</span></td><td>GeometryMode flags (Construction, Blocked)</td><td><span class="crate-tag">cadora-sketch</span></td><td class="source-ref">SketchGeometryExtension.h</td></tr>
+      <tr><td><span class="pending">&#9744;</span></td><td>Unit tests for core types (GeoId arithmetic, PointPos, element identification)</td><td><span class="crate-tag">cadora-sketch</span></td><td class="source-ref">—</td></tr>
+    </table>
+  </div>
+</div>
+
+<!-- ==================== PHASE A1 ==================== -->
+<div class="phase">
+  <div class="phase-header" onclick="this.parentElement.classList.toggle('open')">
+    <h3><span class="arrow">&#9654;</span> A1 — Geometry Storage &amp; Management <span class="phase-badge badge-todo">Todo</span></h3>
+    <span class="phase-pct">0 / 8</span>
+  </div>
+  <div class="phase-body">
+    <table>
+      <tr><th></th><th>Task</th><th>Crate</th><th>Source Reference</th></tr>
+      <tr><td><span class="pending">&#9744;</span></td><td>GeoDef struct (geometry object + metadata: construction flag, internal type, unique ID)</td><td><span class="crate-tag">cadora-sketch</span></td><td class="source-ref">Sketch.h GeoDef</td></tr>
+      <tr><td><span class="pending">&#9744;</span></td><td>Geometry storage (Vec&lt;GeoDef&gt; with stable GeoId indexing)</td><td><span class="crate-tag">cadora-sketch</span></td><td class="source-ref">Sketch.cpp Geoms vector</td></tr>
+      <tr><td><span class="pending">&#9744;</span></td><td>add_geometry() — single &amp; batch, returns GeoId</td><td><span class="crate-tag">cadora-sketch</span></td><td class="source-ref">SketchObject::addGeometry()</td></tr>
+      <tr><td><span class="pending">&#9744;</span></td><td>del_geometry() with cascading constraint removal</td><td><span class="crate-tag">cadora-sketch</span></td><td class="source-ref">SketchObject::delGeometry()</td></tr>
+      <tr><td><span class="pending">&#9744;</span></td><td>Construction mode toggle (set_construction, toggle_construction)</td><td><span class="crate-tag">cadora-sketch</span></td><td class="source-ref">SketchObject::setConstruction()</td></tr>
+      <tr><td><span class="pending">&#9744;</span></td><td>Built-in axes: H-axis (GeoId=-1), V-axis (GeoId=-2), origin point</td><td><span class="crate-tag">cadora-sketch</span></td><td class="source-ref">Sketch.cpp axis setup</td></tr>
+      <tr><td><span class="pending">&#9744;</span></td><td>Geometry query API (get_geometry, get_point, get_complete_geometry)</td><td><span class="crate-tag">cadora-sketch</span></td><td class="source-ref">SketchObject getGeometry()</td></tr>
+      <tr><td><span class="pending">&#9744;</span></td><td>Tests: add/remove geometry, GeoId stability, construction toggle, cascading deletes</td><td><span class="crate-tag">cadora-sketch</span></td><td class="source-ref">—</td></tr>
+    </table>
+  </div>
+</div>
+
+<!-- ==================== PHASE A2 ==================== -->
+<div class="phase">
+  <div class="phase-header" onclick="this.parentElement.classList.toggle('open')">
+    <h3><span class="arrow">&#9654;</span> A2 — Constraint Management <span class="phase-badge badge-todo">Todo</span></h3>
+    <span class="phase-pct">0 / 7</span>
+  </div>
+  <div class="phase-body">
+    <table>
+      <tr><th></th><th>Task</th><th>Crate</th><th>Source Reference</th></tr>
+      <tr><td><span class="pending">&#9744;</span></td><td>add_constraint() — accepts SketchConstraint, validates geometry references</td><td><span class="crate-tag">cadora-sketch</span></td><td class="source-ref">SketchObject::addConstraint()</td></tr>
+      <tr><td><span class="pending">&#9744;</span></td><td>del_constraint() — remove by index, update references</td><td><span class="crate-tag">cadora-sketch</span></td><td class="source-ref">SketchObject::delConstraint()</td></tr>
+      <tr><td><span class="pending">&#9744;</span></td><td>set_datum() — update dimensional constraint value</td><td><span class="crate-tag">cadora-sketch</span></td><td class="source-ref">SketchObject::setDatum()</td></tr>
+      <tr><td><span class="pending">&#9744;</span></td><td>set_driving() / set_active() — toggle constraint modes</td><td><span class="crate-tag">cadora-sketch</span></td><td class="source-ref">SketchObject::setDriving()</td></tr>
+      <tr><td><span class="pending">&#9744;</span></td><td>Constraint-to-GCS translation (map SketchConstraint &rarr; Box&lt;dyn Constraint&gt; for solver)</td><td><span class="crate-tag">cadora-sketch</span></td><td class="source-ref">Sketch::addConstraints()</td></tr>
+      <tr><td><span class="pending">&#9744;</span></td><td>Block constraint implementation (fix all parameters of a geometry)</td><td><span class="crate-tag">cadora-sketch</span></td><td class="source-ref">Sketch.cpp Block handling</td></tr>
+      <tr><td><span class="pending">&#9744;</span></td><td>Tests: add/remove constraints, datum changes, driving toggle, GCS translation accuracy</td><td><span class="crate-tag">cadora-sketch</span></td><td class="source-ref">—</td></tr>
+    </table>
+  </div>
+</div>
+
+<!-- ==================== PHASE A3 ==================== -->
+<div class="phase">
+  <div class="phase-header" onclick="this.parentElement.classList.toggle('open')">
+    <h3><span class="arrow">&#9654;</span> A3 — Solver Integration (Sketch &harr; GCS) <span class="phase-badge badge-todo">Todo</span></h3>
+    <span class="phase-pct">0 / 8</span>
+  </div>
+  <div class="phase-body">
+    <table>
+      <tr><th></th><th>Task</th><th>Crate</th><th>Source Reference</th></tr>
+      <tr><td><span class="pending">&#9744;</span></td><td>Geometry-to-GCS parameter mapping (allocate ParamIdx for each geometry's free params)</td><td><span class="crate-tag">cadora-sketch</span></td><td class="source-ref">Sketch.cpp addGeometry param setup</td></tr>
+      <tr><td><span class="pending">&#9744;</span></td><td>param2geoelement reverse map (ParamIdx &rarr; GeoElementId for diagnosis output)</td><td><span class="crate-tag">cadora-sketch</span></td><td class="source-ref">Sketch.h param2geoelement</td></tr>
+      <tr><td><span class="pending">&#9744;</span></td><td>set_up_sketch() — full setup pipeline: push geometry params, build constraints, configure solver</td><td><span class="crate-tag">cadora-sketch</span></td><td class="source-ref">Sketch::setUpSketch()</td></tr>
+      <tr><td><span class="pending">&#9744;</span></td><td>solve() — invoke GCS solver, apply solution back to geometry, return status</td><td><span class="crate-tag">cadora-sketch</span></td><td class="source-ref">Sketch::solve()</td></tr>
+      <tr><td><span class="pending">&#9744;</span></td><td>Solver status mapping (GCS SolveStatus &rarr; user-friendly result: OK, Redundant, Conflicting, Over, Malformed)</td><td><span class="crate-tag">cadora-sketch</span></td><td class="source-ref">Sketch.h solve return codes</td></tr>
+      <tr><td><span class="pending">&#9744;</span></td><td>Diagnosis integration (get_dof, get_conflicting, get_redundant, get_dependent_params)</td><td><span class="crate-tag">cadora-sketch</span></td><td class="source-ref">SketchObject solver status getters</td></tr>
+      <tr><td><span class="pending">&#9744;</span></td><td>Solver configuration passthrough (maxIter, convergence, algorithm, etc.)</td><td><span class="crate-tag">cadora-sketch</span></td><td class="source-ref">Sketch.h solver config setters</td></tr>
+      <tr><td><span class="pending">&#9744;</span></td><td>Tests: full solve pipeline, diagnosis output, re-solve after changes, solver config effects</td><td><span class="crate-tag">cadora-sketch</span></td><td class="source-ref">—</td></tr>
+    </table>
+  </div>
+</div>
+
+<!-- ==================== PHASE A4 ==================== -->
+<div class="phase">
+  <div class="phase-header" onclick="this.parentElement.classList.toggle('open')">
+    <h3><span class="arrow">&#9654;</span> A4 — Interactive Editing &amp; Dragging <span class="phase-badge badge-todo">Todo</span></h3>
+    <span class="phase-pct">0 / 5</span>
+  </div>
+  <div class="phase-body">
+    <table>
+      <tr><th></th><th>Task</th><th>Crate</th><th>Source Reference</th></tr>
+      <tr><td><span class="pending">&#9744;</span></td><td>init_temporary_move() — set up temp constraints for interactive drag</td><td><span class="crate-tag">cadora-sketch</span></td><td class="source-ref">SketchObject::initTemporaryMove()</td></tr>
+      <tr><td><span class="pending">&#9744;</span></td><td>move_geometry_temporary() — update drag point, re-solve incrementally</td><td><span class="crate-tag">cadora-sketch</span></td><td class="source-ref">SketchObject::moveGeometryTemporary()</td></tr>
+      <tr><td><span class="pending">&#9744;</span></td><td>Coincidence groups (getCoincidenceGroups, arePointsCoincident)</td><td><span class="crate-tag">cadora-sketch</span></td><td class="source-ref">SketchObject coincidence methods</td></tr>
+      <tr><td><span class="pending">&#9744;</span></td><td>Point-on-curve hit testing (isPointOnCurve, closest point on geometry)</td><td><span class="crate-tag">cadora-sketch</span></td><td class="source-ref">SketchObject::isPointOnCurve()</td></tr>
+      <tr><td><span class="pending">&#9744;</span></td><td>Tests: drag + solve, coincidence detection, hit testing</td><td><span class="crate-tag">cadora-sketch</span></td><td class="source-ref">—</td></tr>
+    </table>
+  </div>
+</div>
+
+<!-- ==================== PHASE A5 ==================== -->
+<div class="phase">
+  <div class="phase-header" onclick="this.parentElement.classList.toggle('open')">
+    <h3><span class="arrow">&#9654;</span> A5 — Auto-Constraints <span class="phase-badge badge-todo">Todo</span></h3>
+    <span class="phase-pct">0 / 5</span>
+  </div>
+  <div class="phase-body">
+    <table>
+      <tr><th></th><th>Task</th><th>Crate</th><th>Source Reference</th></tr>
+      <tr><td><span class="pending">&#9744;</span></td><td>Detect coincident points (within precision tolerance)</td><td><span class="crate-tag">cadora-sketch</span></td><td class="source-ref">SketchAnalysis detectMissingPointOnPoint</td></tr>
+      <tr><td><span class="pending">&#9744;</span></td><td>Detect vertical/horizontal lines (near-axis alignment)</td><td><span class="crate-tag">cadora-sketch</span></td><td class="source-ref">SketchAnalysis detectVerticalHorizontal</td></tr>
+      <tr><td><span class="pending">&#9744;</span></td><td>Detect equal-length segments &amp; equal radii</td><td><span class="crate-tag">cadora-sketch</span></td><td class="source-ref">SketchAnalysis detectMissingEquality</td></tr>
+      <tr><td><span class="pending">&#9744;</span></td><td>Auto-apply detected constraints + auto-remove redundants</td><td><span class="crate-tag">cadora-sketch</span></td><td class="source-ref">SketchAnalysis makeMissing + autoRemove</td></tr>
+      <tr><td><span class="pending">&#9744;</span></td><td>Tests: auto-detect accuracy, false positive prevention, redundancy cleanup</td><td><span class="crate-tag">cadora-sketch</span></td><td class="source-ref">—</td></tr>
+    </table>
+  </div>
+</div>
+
+<!-- ==================== PHASE A6 ==================== -->
+<div class="phase">
+  <div class="phase-header" onclick="this.parentElement.classList.toggle('open')">
+    <h3><span class="arrow">&#9654;</span> A6 — Geometry Operations <span class="phase-badge badge-todo">Todo</span></h3>
+    <span class="phase-pct">0 / 7</span>
+  </div>
+  <div class="phase-body">
+    <table>
+      <tr><th></th><th>Task</th><th>Crate</th><th>Source Reference</th></tr>
+      <tr><td><span class="pending">&#9744;</span></td><td>fillet() — arc fillet between two lines at vertex</td><td><span class="crate-tag">cadora-sketch</span></td><td class="source-ref">SketchObject::fillet()</td></tr>
+      <tr><td><span class="pending">&#9744;</span></td><td>trim() — split geometry at intersection &amp; remove segment</td><td><span class="crate-tag">cadora-sketch</span></td><td class="source-ref">SketchObject::trim()</td></tr>
+      <tr><td><span class="pending">&#9744;</span></td><td>extend() — extend line/arc to another curve</td><td><span class="crate-tag">cadora-sketch</span></td><td class="source-ref">SketchObject::extend()</td></tr>
+      <tr><td><span class="pending">&#9744;</span></td><td>split() — break geometry at a point without removal</td><td><span class="crate-tag">cadora-sketch</span></td><td class="source-ref">SketchObject::split()</td></tr>
+      <tr><td><span class="pending">&#9744;</span></td><td>join() — merge two compatible geometries</td><td><span class="crate-tag">cadora-sketch</span></td><td class="source-ref">SketchObject::join()</td></tr>
+      <tr><td><span class="pending">&#9744;</span></td><td>Symmetric copy &amp; pattern (addSymmetric, addCopy)</td><td><span class="crate-tag">cadora-sketch</span></td><td class="source-ref">SketchObject addSymmetric/addCopy</td></tr>
+      <tr><td><span class="pending">&#9744;</span></td><td>Tests: fillet geometry, trim at intersection, extend to boundary, symmetric copy</td><td><span class="crate-tag">cadora-sketch</span></td><td class="source-ref">—</td></tr>
+    </table>
+  </div>
+</div>
+
+<!-- ==================== PHASE A7 ==================== -->
+<div class="phase">
+  <div class="phase-header" onclick="this.parentElement.classList.toggle('open')">
+    <h3><span class="arrow">&#9654;</span> A7 — External Geometry &amp; Serialization <span class="phase-badge badge-todo">Todo</span></h3>
+    <span class="phase-pct">0 / 7</span>
+  </div>
+  <div class="phase-body">
+    <table>
+      <tr><th></th><th>Task</th><th>Crate</th><th>Source Reference</th></tr>
+      <tr><td><span class="pending">&#9744;</span></td><td>External geometry references (add_external, del_external — edges from 3D model)</td><td><span class="crate-tag">cadora-sketch</span></td><td class="source-ref">SketchObject addExternal/delExternal</td></tr>
+      <tr><td><span class="pending">&#9744;</span></td><td>External geometry rebuild (rebuildExternalGeometry, sync with 3D model changes)</td><td><span class="crate-tag">cadora-sketch</span></td><td class="source-ref">SketchObject rebuildExternalGeometry</td></tr>
+      <tr><td><span class="pending">&#9744;</span></td><td>Sketch serialization — save to JSON/binary (all geometry + constraints + metadata)</td><td><span class="crate-tag">cadora-sketch</span></td><td class="source-ref">SketchObject Save/Restore</td></tr>
+      <tr><td><span class="pending">&#9744;</span></td><td>Sketch deserialization — load from JSON/binary, reconstruct GCS state</td><td><span class="crate-tag">cadora-sketch</span></td><td class="source-ref">SketchObject Save/Restore</td></tr>
+      <tr><td><span class="pending">&#9744;</span></td><td>Undo/Redo stack (snapshot-based or command-pattern)</td><td><span class="crate-tag">cadora-sketch</span></td><td class="source-ref">SketchObject transaction support</td></tr>
+      <tr><td><span class="pending">&#9744;</span></td><td>Validation &amp; cleanup (detectDegeneratedGeometries, validateConstraints, consistency checks)</td><td><span class="crate-tag">cadora-sketch</span></td><td class="source-ref">SketchObject validation methods</td></tr>
+      <tr><td><span class="pending">&#9744;</span></td><td>Tests: serialize/deserialize roundtrip, undo/redo, external geometry, validation</td><td><span class="crate-tag">cadora-sketch</span></td><td class="source-ref">—</td></tr>
+    </table>
+  </div>
+</div>
+
 </div><!-- /container -->
 
 <footer>
@@ -301,8 +472,24 @@
 document.addEventListener('DOMContentLoaded', () => {
   const done = document.querySelectorAll('.check, .done').length;
   const total = document.querySelectorAll('.check, .done, .pending').length;
+  // Solver progress
   document.getElementById('overallPct').textContent = done;
   document.getElementById('overallBar').style.width = Math.round(done/total*100) + '%';
+  // Sketch manager progress
+  const sketchSection = document.querySelector('h1[style]');
+  if (sketchSection) {
+    let el = sketchSection.nextElementSibling;
+    let sDone = 0, sTotal = 0;
+    while (el && el.tagName !== 'H1') {
+      sDone += el.querySelectorAll('.check, .done').length;
+      sTotal += el.querySelectorAll('.check, .done, .pending').length;
+      el = el.nextElementSibling;
+    }
+    if (sTotal > 0) {
+      document.getElementById('sketchPct').textContent = sDone;
+      document.getElementById('sketchBar').style.width = Math.round(sDone/sTotal*100) + '%';
+    }
+  }
 });
 </script>
 </body>
